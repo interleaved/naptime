@@ -43,9 +43,7 @@
 (defn is-resource-embeddding? [x]
   (= 2 (count (str/split x #"\."))))
 
-;; {:grade "op.value" :and "", }
-;; [[<type> <key> <value>] .... ] type :: filter | logic | resource-embedding
-
+;; TODO: this step is probably not needed unless there is an "expansion" of filter values
 (defn parse-read-request [params]
   (reduce-kv (fn [acc k v]
                (cond
@@ -55,28 +53,58 @@
                  (is-resource-embeddding? (name k))
                  (conj acc [:resource-embedding k v])
 
+                 (= k :select)
+                 (conj acc [:select :no-key v])
+
                  :else
                  (conj acc [:filter k v]))
                ) [] params))
+
+(defn resolve-alias [x]
+  (str/split x #"\:"))
+
+(defn extract-select [x] ;; TODO: casting column, jsonb path, computed column
+  [:select (mapv resolve-alias (str/split x #"\,"))])
 
 (defn extract-filter [key x]
   (let [[op value] (str/split x #"\.")]
     [((keyword op) operators) key value]))
 
-(defn extract-logic [key x]
-  [:logic key x])
+(defn extract-logic [s]
+  (let [or-matches (re-matches #"or\((.*)\)" s)
+        and-matches (re-matches #"and\((.*)\)" s)
+        not-matches (re-matches #"not\.(.*)" s)
+        pred (str/split s #",")]
+    (cond
+      or-matches [:or (extract-logic (str/join (rest or-matches)))]
+      and-matches [:and (extract-logic (str/join (rest and-matches)))]
+      not-matches [:not (extract-logic (str/join (rest not-matches)))]
+      :else (do
+              (let [[column operator val] (str/split (first pred) #"\.")]
+                ;(prn column operator val)
+                (if (> (count pred) 1)
+                  (conj
+                    (vector (keyword operator) (keyword column) val)
+                    (extract-logic (str/join (rest pred))))
+                  (vector (keyword operator) (keyword column) val)))))))
+
+;;(prn (parse "or(age.eq.14,not.and(age.gte.11,age.lte.17))"))
+;;(prn (parse "age.eq.14,not.and(age.gte.11,age.lte.17)"))
+;;(prn (parse "not.and(age.gte.11,age.lte.17)"))
 
 (defn extract-resource-embedding [key x]
-  [:resource key x])
+  [:resource key x]) ;; affect build (inner) join for honeysql
 
 (defn ->hsql-map [tagged-values]
   (reduce (fn [acc [type key value]]
             (condp = type
+              :select             (conj acc (extract-select value))
               :filter             (conj acc (extract-filter key value))
-              :logic              (conj acc (extract-logic  key value))
+              :logic              (conj acc (extract-logic  value))
               :resource-embedding (conj acc (extract-resource-embedding key value))
 
-              )) [] tagged-values))
+              ))
+          [] tagged-values))
 
 (defn read-request [req]
   (let [query-params (:params req)
@@ -112,7 +140,7 @@
 
 ;; tables and views
 (def renaming-columns "select=fullName:full_name,birthDate:birth_date")
-(def logical-operators-qs "grade=gte.90&student=is.true&or=(age.eq.14,not.and(age.gte.11,age.lte.17))")
+(def logical-operators-qs "select=*&grade=gte.90&student=is.true&or=(age.eq.14,not.and(age.gte.11,age.lte.17))")
 
 ;; resource embedding
 (def embedding-through-join-tables "select=films(title,year)")
@@ -121,7 +149,7 @@
 (def embedded-top-level-filtering "select=title,actors(first_name,last_name)&actors.first_name=eq.Jehanne")
 ;; embedding after insertions / updates / deletions
 
-((handler) (req renaming-columns))
+;; ((handler) (req renaming-columns))
 ;;((handler) (req embedding-through-join-tables))
 ((handler) (req logical-operators-qs))
 
