@@ -46,27 +46,11 @@
 (defn is-resource-embeddding? [x]
   (= 2 (count (str/split x #"\."))))
 
-;; all that start with operator would belong to {:where [....]}
-;; (partition-by #(is-operator? (first %)) [[:= :age 123] [:select ['*]] [:>= :rank 10]])
 
 
 ;; TODO: this step is probably not needed unless there is an "expansion" of filter values
 ;; this intermediary step is just so we can partition (group by) all the where clauses
-(defn parse-read-request [params]
-  (reduce-kv (fn [acc k v]
-               (cond
-                 (contains? logical-operators k)
-                 (conj acc [:logic k v])
 
-                 (is-resource-embeddding? (name k))
-                 (conj acc [:resource-embedding k v])
-
-                 (= k :select)
-                 (conj acc [:select :no-key v])
-
-                 :else
-                 (conj acc [:filter k v])))
-             [] params))
 
 (defn resolve-alias [x]
   (str/split x #"\:"))
@@ -103,23 +87,30 @@
 (defn extract-resource-embedding [key x]
   [:resource key x]) ;; affect build (inner) join for honeysql
 
-(defn ->hsql-map [tagged-values]
-  (reduce (fn [acc [type key value]]
-            (condp = type
-              :select             (conj acc (extract-select value))
-              :filter             (conj acc (extract-filter key value))
-              :logic              (conj acc (extract-logic  value))
-              :resource-embedding (conj acc (extract-resource-embedding key value))
+(defn ->honeysql [params]
+  (reduce-kv (fn [acc k v]
+               (cond
 
-              ))
-          [] tagged-values))
+                 (contains? logical-operators k)
+                 (conj acc (extract-logic v))
+
+                 (is-resource-embeddding? (name k))
+                 (conj acc (extract-resource-embedding k v))
+
+                 (= k :select)
+                 (conj acc (extract-select v))
+
+                 (= k :order)
+                 (conj acc (extract-filter k v))
+
+                 :else
+                 (conj acc (extract-filter k v))))
+             [] params))
 
 (defn read-request [req]
   (let [query-params (:params req)
         _target       (-> req :path-params :target)]
-    (-> query-params
-        (parse-read-request)
-        (->hsql-map))))
+    (->honeysql query-params)))
 
 (defn routes []
   ;; TODO: POST, PUT, DELETE, ignore options for now
