@@ -40,10 +40,18 @@
    :or    :or
    :and   :AND})
 
+(defn is-operator? [x]
+  (contains? (set (vals operators)) x))
+
 (defn is-resource-embeddding? [x]
   (= 2 (count (str/split x #"\."))))
 
+;; all that start with operator would belong to {:where [....]}
+;; (partition-by #(is-operator? (first %)) [[:= :age 123] [:select ['*]] [:>= :rank 10]])
+
+
 ;; TODO: this step is probably not needed unless there is an "expansion" of filter values
+;; this intermediary step is just so we can partition (group by) all the where clauses
 (defn parse-read-request [params]
   (reduce-kv (fn [acc k v]
                (cond
@@ -57,8 +65,8 @@
                  (conj acc [:select :no-key v])
 
                  :else
-                 (conj acc [:filter k v]))
-               ) [] params))
+                 (conj acc [:filter k v])))
+             [] params))
 
 (defn resolve-alias [x]
   (str/split x #"\:"))
