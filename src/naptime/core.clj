@@ -37,26 +37,23 @@
    :nxl   (keyword "&>")
    :adj   (keyword "-|-")
    :not   :NOT
-   :or    :or
+   :or    :OR
    :and   :AND})
 
-(defn is-operator? [x]
-  (contains? (set (vals operators)) x))
 
-(defn is-resource-embeddding? [x]
-  (= 2 (count (str/split x #"\."))))
+(defn select?   [x] (= :select x))
+(defn order?    [x] (= :order x))
+(defn operator? [x] (->> operators vals set x))
 
+(defn unpack-alias [x]
+  (let [parts (str/split x #"\:")
+        have-alias? (> (count parts) 1)]
+    (if have-alias?
+      parts
+      x)))
 
-
-;; TODO: this step is probably not needed unless there is an "expansion" of filter values
-;; this intermediary step is just so we can partition (group by) all the where clauses
-
-
-(defn resolve-alias [x]
-  (str/split x #"\:"))
-
-(defn extract-select [x] ;; TODO: casting column, jsonb path, computed column
-  [:select (mapv resolve-alias (str/split x #"\,"))])
+(defn extract-select [x] ;; TODO: casting column, jsonb path, computed column, join foreign tables
+  [:select (mapv unpack-alias (str/split x #"\,"))])
 
 (defn extract-filter [key x]
   (let [[op value] (str/split x #"\.")]
@@ -88,34 +85,46 @@
   [:resource key x]) ;; affect build (inner) join for honeysql
 
 (defn ->honeysql [params]
-  (reduce-kv (fn [acc k v]
-               (cond
+  (let [clauses (reduce-kv (fn [acc k v]
+                     (conj acc
+                           (cond
+                             (contains? logical-operators k)
+                             (extract-logic v)
 
-                 (contains? logical-operators k)
-                 (conj acc (extract-logic v))
+                             (select? k)
+                             (extract-select v)
 
-                 (is-resource-embeddding? (name k))
-                 (conj acc (extract-resource-embedding k v))
+                             (order? k)
+                             (extract-filter k v) ;; TODO
 
-                 (= k :select)
-                 (conj acc (extract-select v))
+                             :else
+                             (extract-filter k v))))
+                           [] params)
+        select-clause (take-while (comp select? first)   clauses)
+        where-clauses (filter     (comp operator? first) clauses)
+        order-clause  (take-while (comp order? first)    clauses)] ; TODO: multiple?
+    {:select (second (first select-clause))
+     :where  (vec where-clauses)
+     ;; join conditions
+     ;; order
+     ;; postgres doesn't allow group by
+     }))
 
-                 (= k :order)
-                 (conj acc (extract-filter k v))
-
-                 :else
-                 (conj acc (extract-filter k v))))
-             [] params))
 
 (defn read-request [req]
   (let [query-params (:params req)
         _target       (-> req :path-params :target)]
     (->honeysql query-params)))
 
+(def mutation-request read-request)
+
 (defn routes []
   ;; TODO: POST, PUT, DELETE, ignore options for now
   [["/:target"
-    {:get {:handler read-request}}]])
+    {:get {:handler read-request}
+     :put {:handler mutation-request}}]
+   ["/rpc/:target"
+    {:post {:handler mutation-request}}]])
 
 (defn handler []
   (ring/ring-handler
