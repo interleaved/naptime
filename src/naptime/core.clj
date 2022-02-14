@@ -40,7 +40,6 @@
    :or    :OR
    :and   :AND})
 
-
 (defn select?   [x] (= :select x))
 (defn order?    [x] (= :order x))
 (defn operator? [x] (->> operators vals set x))
@@ -107,15 +106,18 @@
      ;; postgres doesn't allow group by
      }))
 
-
 (defn read-request [req]
-  (let [query-params (:params req)
-        _target       (-> req :path-params :target)]
-    (->honeysql query-params)))
+  (prn "got here")
+  (let [params (:params req)
+        target (-> req :path-params :target)
+        ;; TODO: read db structure (should read only once) and include
+        ;; the information as part of building honeysql
+       ]
+    (->honeysql params)))
 
 (def mutation-request read-request)
 
-(defn routes []
+(def routes
   ;; TODO: POST, PUT, DELETE, ignore options for now
   [["/:target"
     {:get {:handler read-request}
@@ -126,7 +128,8 @@
 (defn handler []
   (ring/ring-handler
    (ring/router
-    (routes)
+    #_(routes)
+    routes
     {:exception pretty/exception
      :data {:muuntaja m/instance
             :coercion malli/coercion
@@ -140,21 +143,16 @@
                          coercion/coerce-response-middleware]}})
     {:executor sieppari/executor}))
 
-(defn req [qs] (-> (mock/request :get "/target-table")
-                   (mock/query-string qs)))
-
-;; tables and views
-(def renaming-columns "select=fullName:full_name,birthDate:birth_date")
-(def logical-operators-qs "select=*&grade=gte.90&student=is.true&or=(age.eq.14,not.and(age.gte.11,age.lte.17))")
+;; tables
+(def renaming-columns "/people?select=fullName:full_name,birthDate:birth_date")
+(def logical-operators-qs "/people?select=*&grade=gte.90&student=is.true&or=(age.eq.14,not.and(age.gte.11,age.lte.17))")
 
 ;; resource embedding
-(def embedding-through-join-tables "select=films(title,year)")
-(def nested-embedding "select=roles(character,films(title,year))")
-(def embedded-filters "select=*,actors(*)&actors.order=last_name,first_name")
-(def embedded-top-level-filtering "select=title,actors(first_name,last_name)&actors.first_name=eq.Jehanne")
+(def embedding-through-join-tables "/actors?select=films(title,year)")
+(def nested-embedding "/actors?select=roles(character,films(title,year))")
+(def embedded-filters "/films?select=*,actors(*)&actors.order=last_name,first_name")
+(def embedded-top-level-filtering "/films?select=title,actors(first_name,last_name)&actors.first_name=eq.Jehanne")
+
 ;; embedding after insertions / updates / deletions
 
-;; ((handler) (req renaming-columns))
-;;((handler) (req embedding-through-join-tables))
-((handler) (req logical-operators-qs))
-
+((handler) (mock/request :get logical-operators-qs))
