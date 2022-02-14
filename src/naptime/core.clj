@@ -85,23 +85,25 @@
   [:resource key x]) ;; affect build (inner) join for honeysql
 
 (defn ->honeysql [params]
-  (let [clauses (reduce-kv (fn [acc k v]
-                     (conj acc
-                           (cond
-                             (contains? logical-operators k)
-                             (extract-logic v)
+  (let [clauses (reduce-kv
+                 (fn [acc k v]
+                   (conj acc
+                     (cond
+                       (contains? logical-operators k)
+                       (extract-logic v)
 
-                             (select? k)
-                             (extract-select v)
+                       (select? k)
+                       (extract-select v)
 
-                             (order? k)
-                             (extract-filter k v) ;; TODO
+                       (order? k)
+                       (extract-filter k v) ;; TODO
 
-                             :else
-                             (extract-filter k v))))
-                           [] params)
+                       :else
+                       (extract-filter k v))))
+                    [] params)
         select-clause (take-while (comp select? first)   clauses)
         where-clauses (filter     (comp operator? first) clauses)
+        ; TODO: detect embed, build join clause, left vs. inner vs. right?
         order-clause  (take-while (comp order? first)    clauses)] ; TODO: multiple?
     {:select (second (first select-clause))
      :where  (vec where-clauses)
@@ -161,8 +163,3 @@
 ;;((handler) (req embedding-through-join-tables))
 ((handler) (req logical-operators-qs))
 
-;; or=(age.eq.14,not.and(age.gte.11,age.lte.17))
-;;
-;; honeysql
-;; [:or [:= :age 14]
-;;      [:not [:and [:>= :age 11] [:<= :age 17]]]]
