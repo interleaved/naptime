@@ -61,25 +61,19 @@
 
 (defn extract-logic [s]
   (let [or-matches (re-matches #"or\((.*)\)" s)
-        and-matches (re-matches #"and\((.*)\)" s)
+        or-preds (str/split (str/join (rest or-matches)) #"," 2)
         not-matches (re-matches #"not\.(.*)" s)
         pred (str/split s #",")]
     (cond
-      or-matches [:or (extract-logic (str/join (rest or-matches)))]
-      and-matches [:and (extract-logic (str/join (rest and-matches)))]
-      not-matches [:not (extract-logic (str/join (rest not-matches)))]
-      :else (do
-              (let [[column operator val] (str/split (first pred) #"\.")]
-                ;(prn column operator val)
-                (if (> (count pred) 1)
-                  (conj
-                    (vector (keyword operator) (keyword column) val)
-                    (extract-logic (str/join (rest pred))))
-                  (vector (keyword operator) (keyword column) val)))))))
+      or-matches (into [:or] (mapv extract-logic or-preds))
 
-;;(prn (parse "or(age.eq.14,not.and(age.gte.11,age.lte.17))"))
-;;(prn (parse "age.eq.14,not.and(age.gte.11,age.lte.17)"))
-;;(prn (parse "not.and(age.gte.11,age.lte.17)"))
+      not-matches [:not (extract-logic (str/join (rest not-matches)))]
+      :else (let [[column operator val] (str/split (first pred) #"\.")]
+              (if (> (count pred) 1)
+                (conj
+                 (vector (keyword operator) (keyword column) val)
+                 (extract-logic (str/join (rest pred))))
+                (vector (keyword operator) (keyword column) val))))))
 
 (defn extract-resource-embedding [key x]
   [:resource key x]) ;; affect build (inner) join for honeysql
@@ -101,6 +95,7 @@
                        :else
                        (extract-filter k v))))
                     [] params)
+        ;_ (prn clauses)
         select-clause (take-while (comp select? first)   clauses)
         where-clauses (filter     (comp operator? first) clauses)
         ; TODO: detect embed, build join clause, left vs. inner vs. right?
