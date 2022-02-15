@@ -58,56 +58,96 @@
   (let [[op value] (str/split x #"\.")]
     [((keyword op) operators) key value]))
 
-(defn extract-logic [s]
+(defn destruct-parens [s]
+  (re-matches #"\((.*)\)" s))
+
+(defn split-comma [s]
+  (str/split s #","))
+
+(defn split-dot [s]
+  (str/split s #"\."))
+
+(defn split-opening-paren[s]
+  (str/split s #"\("))
+
+(defn extract-condition [s]
+  (let [[field op value] (split-dot s)]
+    [op field value]))
+
+(defn is-condition? [s]
+  (= (count (split-dot s)) 3))
+
+
+(defn extract-expression [s]
+  (let [[op & expression] (split-dot s)]
+    (when (seq expression)
+      (let [sub-expressions (split-opening-paren expression)
+            has-sub-expression? (> (count sub-expressions) 1)]
+        (if has-sub-expression?
+          (into [op] [(first sub-expressions) (map extract-expression (rest sub-expressions))])
+          (into [op] (extract-expression expression)))))))
+
+(defn extract-logic [x]
+  (let [parts (destruct-parens x)]
+    (when (seq parts)
+      (let [conditions (split-comma (second parts))]
+        (mapv (fn [condition]
+                (if (is-condition? condition)
+                  (extract-condition condition)
+                  (extract-expression condition))) conditions)))))
+
+(defn extract-logic-old [s]
   (let [or-matches (re-matches #"or\((.*)\)" s)
         or-preds (str/split (str/join (rest or-matches)) #"," 2)
         not-matches (re-matches #"not\.(.*)" s)
         pred (str/split s #",")]
     (cond
-      or-matches (into [:or] (mapv extract-logic or-preds))
+      or-matches
+      (into [:or] (mapv extract-logic or-preds))
 
-      not-matches [:not (extract-logic (str/join (rest not-matches)))]
-      :else (let [[column operator val] (str/split (first pred) #"\.")]
-              (if (> (count pred) 1)
-                (conj
-                 (vector (keyword operator) (keyword column) val)
-                 (extract-logic (str/join (rest pred))))
-                (vector (keyword operator) (keyword column) val))))))
+      not-matches
+      [:not (extract-logic (str/join (rest not-matches)))]
+
+      :else
+      (let [[column operator val] (str/split (first pred) #"\.")]
+         (if (> (count pred) 1)
+            (conj
+              (vector (keyword operator) (keyword column) val)
+              (extract-logic (str/join (rest pred))))
+            (vector (keyword operator) (keyword column) val))))))
 
 (defn extract-resource-embedding [key x]
   [:resource key x]) ;; affect build (inner) join for honeysql
 
 (defn ->honeysql [params]
   (let [clauses (reduce-kv
-                 (fn [acc k v]
-                   (conj acc
-                     (cond
-                       (contains? logical-operators k)
-                       (extract-logic v)
+                  (fn [acc k v]
+                    (conj acc
+                      (cond
+                        (contains? logical-operators k)
+                        (into [k] (extract-logic v))
 
-                       (select? k)
-                       (extract-select v)
+                        (select? k)
+                        (extract-select v)
 
-                       (order? k)
-                       (extract-filter k v) ;; TODO
+                        (order? k)
+                        (extract-filter k v) ;; TODO
 
-                       :else
-                       (extract-filter k v))))
-                    [] params)
-        ;_ (prn clauses)
+                        :else
+                        (extract-filter k v))))
+                  [] params)
         select-clause (take-while (comp select? first)   clauses)
-        where-clauses (filter     (comp operator? first) clauses)
+        ;; where-clauses (filter     (comp operator? first) clauses)
         ; TODO: detect embed, build join clause, left vs. inner vs. right?
         order-clause  (take-while (comp order? first)    clauses)] ; TODO: multiple?
     {:select (second (first select-clause))
-     :where  (vec where-clauses)
+     :where  [] ;;(vec where-clauses)
      ;; join conditions
      ;; order
      ;; postgres doesn't allow group by
      }))
 
 (defn read-request [req]
-  (prn "got here")
   (let [params (:params req)
         target (-> req :path-params :target)
         ;; TODO: read db structure (should read only once) and include
@@ -128,7 +168,6 @@
 (defn handler []
   (ring/ring-handler
    (ring/router
-    #_(routes)
     routes
     {:exception pretty/exception
      :data {:muuntaja m/instance
@@ -154,5 +193,7 @@
 (def embedded-top-level-filtering "/films?select=title,actors(first_name,last_name)&actors.first_name=eq.Jehanne")
 
 ;; embedding after insertions / updates / deletions
-
 ((handler) (mock/request :get logical-operators-qs))
+
+
+;;(re-matches #"\((.*)\)" "abc")
