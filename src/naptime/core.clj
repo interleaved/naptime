@@ -42,7 +42,10 @@
 
 (defn select?   [x] (= :select x))
 (defn order?    [x] (= :order x))
-(defn operator? [x] (->> operators vals set x))
+
+(defn operator? [x]
+  (let [s (-> operators vals set)]
+    (or (contains? s x) (contains? s (str/upper-case x)))))
 
 (defn unpack-alias [x]
   (let [parts (str/split x #"\:")
@@ -54,67 +57,40 @@
 (defn extract-select [x] ;; TODO: casting column, jsonb path, computed column, join foreign tables
   [:select (mapv unpack-alias (str/split x #"\,"))])
 
-(defn extract-filter [key x]
-  (let [[op value] (str/split x #"\.")]
-    [((keyword op) operators) key value]))
-
-(defn destruct-parens [s]
-  (re-matches #"\((.*)\)" s))
-
-(defn split-comma [s]
-  (str/split s #","))
+(defn split-comma2 [s]
+  (str/split s #"," 2))
 
 (defn split-dot [s]
   (str/split s #"\."))
 
-(defn split-opening-paren[s]
-  (str/split s #"\("))
+(defn extract-filter [key x]
+  (let [[op value] (split-dot x)]
+    [((keyword op) operators) key value]))
 
 (defn extract-condition [s]
   (let [[field op value] (split-dot s)]
-    [op field value]))
-
-(defn is-condition? [s]
-  (= (count (split-dot s)) 3))
-
-
-(defn extract-expression [s]
-  (let [[op & expression] (split-dot s)]
-    (when (seq expression)
-      (let [sub-expressions (split-opening-paren expression)
-            has-sub-expression? (> (count sub-expressions) 1)]
-        (if has-sub-expression?
-          (into [op] [(first sub-expressions) (map extract-expression (rest sub-expressions))])
-          (into [op] (extract-expression expression)))))))
+    [(keyword op) (keyword field) value]))
 
 (defn extract-logic [x]
-  (let [parts (destruct-parens x)]
-    (when (seq parts)
-      (let [conditions (split-comma (second parts))]
-        (mapv (fn [condition]
-                (if (is-condition? condition)
-                  (extract-condition condition)
-                  (extract-expression condition))) conditions)))))
+  (cond
+    (str/starts-with? x "(")
+    (extract-logic (second (re-matches #"\((.*)\)" x)))
 
-(defn extract-logic-old [s]
-  (let [or-matches (re-matches #"or\((.*)\)" s)
-        or-preds (str/split (str/join (rest or-matches)) #"," 2)
-        not-matches (re-matches #"not\.(.*)" s)
-        pred (str/split s #",")]
-    (cond
-      or-matches
-      (into [:or] (mapv extract-logic or-preds))
+    (str/starts-with? x "not")
+    [:not (extract-logic (str/replace-first x #"not." ""))]
 
-      not-matches
-      [:not (extract-logic (str/join (rest not-matches)))]
+    (str/starts-with? x "and")
+    [:and (extract-logic (str/replace-first x #"and" ""))]
 
-      :else
-      (let [[column operator val] (str/split (first pred) #"\.")]
-         (if (> (count pred) 1)
-            (conj
-              (vector (keyword operator) (keyword column) val)
-              (extract-logic (str/join (rest pred))))
-            (vector (keyword operator) (keyword column) val))))))
+    (str/starts-with? x "or")
+    [:or (extract-logic (str/replace-first x #"or" ""))]
+
+    (= 2 (count (split-comma2 x)))
+    (let [[head tail] (split-comma2 x)]
+      (conj (extract-logic head) (extract-logic tail)))
+
+    :else
+    [(extract-condition x)]))
 
 (defn extract-resource-embedding [key x]
   [:resource key x]) ;; affect build (inner) join for honeysql
@@ -136,12 +112,14 @@
                         :else
                         (extract-filter k v))))
                   [] params)
+        _ (prn clauses)
         select-clause (take-while (comp select? first)   clauses)
-        ;; where-clauses (filter     (comp operator? first) clauses)
+        where-clauses (filter     (comp operator? first) clauses)
+        _ (prn where-clauses)
         ; TODO: detect embed, build join clause, left vs. inner vs. right?
         order-clause  (take-while (comp order? first)    clauses)] ; TODO: multiple?
     {:select (second (first select-clause))
-     :where  [] ;;(vec where-clauses)
+     :where  (vec where-clauses)
      ;; join conditions
      ;; order
      ;; postgres doesn't allow group by
@@ -194,6 +172,3 @@
 
 ;; embedding after insertions / updates / deletions
 ((handler) (mock/request :get logical-operators-qs))
-
-
-;;(re-matches #"\((.*)\)" "abc")
