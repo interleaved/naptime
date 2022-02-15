@@ -45,7 +45,7 @@
 
 (defn operator? [x]
   (let [s (-> operators vals set)]
-    (or (contains? s x) (contains? s (str/upper-case x)))))
+    (or (contains? s x) (contains? s (keyword (str/upper-case (name x)))))))
 
 (defn unpack-alias [x]
   (let [parts (str/split x #"\:")
@@ -112,17 +112,15 @@
                         :else
                         (extract-filter k v))))
                   [] params)
-        _ (prn clauses)
         select-clause (take-while (comp select? first)   clauses)
         where-clauses (filter     (comp operator? first) clauses)
-        _ (prn where-clauses)
         ; TODO: detect embed, build join clause, left vs. inner vs. right?
         order-clause  (take-while (comp order? first)    clauses)] ; TODO: multiple?
     {:select (second (first select-clause))
      :where  (vec where-clauses)
      ;; join conditions
      ;; order
-     ;; postgres doesn't allow group by
+     ;; postgrest doesn't allow group by
      }))
 
 (defn read-request [req]
