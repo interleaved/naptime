@@ -13,6 +13,12 @@
 
 (def logical-operators #{:or :and})
 
+(def order-keyword
+  {"asc" :asc
+   "desc" :desc
+   "nullsfirst" :nulls-first
+   "nullslast" :nulls-last})
+
 (def operators
   {:eq    :=
    :gt    :>
@@ -54,14 +60,17 @@
       parts
       x)))
 
-(defn extract-select [x] ;; TODO: casting column, jsonb path, computed column, join foreign tables
-  [:select (mapv unpack-alias (str/split x #"\,"))])
+(defn split-comma [s]
+  (str/split s #","))
 
 (defn split-comma2 [s]
   (str/split s #"," 2))
 
 (defn split-dot [s]
   (str/split s #"\."))
+
+(defn extract-select [x] ;; TODO: casting column, jsonb path, computed column, unpack parens
+  [:select (mapv unpack-alias (str/split x #"\,"))])
 
 (defn extract-filter [key x]
   (let [[op value] (split-dot x)]
@@ -92,8 +101,14 @@
     :else
     [(extract-condition x)]))
 
-(defn extract-resource-embedding [key x]
-  [:resource key x]) ;; affect build (inner) join for honeysql
+(defn extract-order [x]
+  (into [:order]
+    (mapv (fn [each]
+            (let [parts (split-dot each)]
+              (if (= 2 (count parts))
+                [(keyword (first parts)) (->> parts second (get order-keyword))]
+                [(keyword (first parts)) :asc])))
+          (split-comma x))))
 
 (defn ->honeysql [params]
   (let [clauses (reduce-kv
@@ -107,7 +122,7 @@
                         (extract-select v)
 
                         (order? k)
-                        (extract-filter k v) ;; TODO
+                        (into [:order] (extract-order v))
 
                         :else
                         (extract-filter k v))))
@@ -115,11 +130,11 @@
         select-clause (take-while (comp select? first)   clauses)
         where-clauses (filter     (comp operator? first) clauses)
         ; TODO: detect embed, build join clause, left vs. inner vs. right?
-        order-clause  (take-while (comp order? first)    clauses)] ; TODO: multiple?
+        order-clause  (filter (comp order? first)    clauses)]
     {:select (second (first select-clause))
      :where  (vec where-clauses)
      ;; join conditions
-     ;; order
+     :order-by (vec (rest (first order-clause)))
      ;; postgrest doesn't allow group by
      }))
 
@@ -160,7 +175,7 @@
 
 ;; tables
 (def renaming-columns "/people?select=fullName:full_name,birthDate:birth_date")
-(def logical-operators-qs "/people?select=*&grade=gte.90&student=is.true&or=(age.eq.14,not.and(age.gte.11,age.lte.17))")
+(def logical-operators-qs "/people?select=*&grade=gte.90&student=is.true&or=(age.eq.14,not.and(age.gte.11,age.lte.17))&order=age.desc,height.asc,david")
 
 ;; resource embedding
 (def embedding-through-join-tables "/actors?select=films(title,year)")
