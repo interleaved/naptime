@@ -47,19 +47,18 @@
    :or    :OR
    :and   :AND})
 
+(defn keyword-upper-case [x]
+  (-> x name str/upper-case keyword))
+
 (defn select?   [x] (= :select x))
 (defn order?    [x] (= :order x))
 
 (defn operator? [x]
   (let [s (-> operators vals set)]
-    (or (contains? s x) (contains? s (keyword (str/upper-case (name x)))))))
+    (or (contains? s x) (contains? s (keyword-upper-case x)))))
 
-(defn unpack-alias [x]
-  (let [parts (str/split x #"\:")
-        have-alias? (> (count parts) 1)]
-    (if have-alias?
-      parts
-      x)))
+(defn split-colon [s]
+  (str/split s #":"))
 
 (defn split-comma [s]
   (str/split s #","))
@@ -70,8 +69,15 @@
 (defn split-dot [s]
   (str/split s #"\."))
 
+(defn unpack-alias [x]
+  (let [parts (split-colon x)
+        have-alias? (> (count parts) 1)]
+    (if have-alias?
+      parts
+      x)))
+
 (defn extract-select [x] ;; TODO: casting column, jsonb path, computed column, unpack parens
-  [:select (mapv unpack-alias (str/split x #"\,"))])
+  (mapv unpack-alias (str/split x #"\,")))
 
 (defn extract-filter [key x]
   (let [[op value] (split-dot x)]
@@ -119,7 +125,7 @@
                         (into [k] (extract-logic v))
 
                         (select? k)
-                        (extract-select v)
+                        (into [:select] (extract-select v))
 
                         (order? k)
                         (into [:order] (extract-order v))
@@ -138,6 +144,10 @@
      ;; postgrest doesn't allow group by
      }))
 
+(def x (atom nil))
+(def y (atom nil))
+(def z (atom nil))
+
 (defn read-request [req]
   (let [params (:params req)
         target (-> req :path-params :target)
@@ -147,6 +157,9 @@
         ;; TODO: not a valid sql
         _ (prn (->honeysql params))
        ]
+    (reset! x params)
+    (reset! y (->honeysql params))
+    (reset! z (sql/format (->honeysql params)))
     (sql/format (->honeysql params))))
 
 (def mutation-request read-request)
