@@ -30,7 +30,7 @@
    :like  :LIKE
    :ilike :ILIKE
    :in    :IN
-   :is    :IS
+   :is    :=
    :fts   (keyword "@@")
    :plfts (keyword "@@")
    :phfts (keyword "@@")
@@ -79,7 +79,7 @@
 
 (defn extract-condition [s]
   (let [[field op value] (split-dot s)]
-    [(keyword op) (keyword field) value]))
+    [((keyword op) operators) (keyword field) value]))
 
 (defn extract-logic [x]
   (cond
@@ -132,7 +132,7 @@
         ; TODO: detect embed, build join clause, left vs. inner vs. right?
         order-clause  (filter (comp order? first)    clauses)]
     {:select (second (first select-clause))
-     :where  (vec where-clauses)
+     :where  (into [:and] where-clauses)
      ;; join conditions
      :order-by (vec (rest (first order-clause)))
      ;; postgrest doesn't allow group by
