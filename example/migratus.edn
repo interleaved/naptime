@@ -1,0 +1,8 @@
+{:store :database
+ :migration-dir "migrations"
+ :command-separator "--;;"
+ :db {:dbtype "postgresql"
+      :host "localhost"
+      :port 5432
+      :dbname "naptime"
+      :user "postgres"}}

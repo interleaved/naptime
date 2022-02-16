@@ -1,0 +1,6 @@
+{:deps {interleaved/naptime {:local/root "../"}
+        conman/conman {:mvn/version "0.9.3"}
+        org.postgresql/postgresql {:mvn/version "42.3.3"}}
+ :aliases {:migrate {:extra-deps {com.github.paulbutcher/clj-migratus {:git/tag "v1.0.2" :git/sha "5ef41c6"}}
+                     ;; :jvm-opts["-Dmigratus.config.path=<CLASSPATH_LOCATION>"]
+                     :main-opts ["-m" "clj-migratus"]}}}
