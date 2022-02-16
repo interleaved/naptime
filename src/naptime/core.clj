@@ -144,8 +144,11 @@
         target (-> req :path-params :target)
         ;; TODO: read db structure (should read only once) and include
         ;; the information as part of building honeysql
+
+        ;; TODO: not a valid sql
+        _ (prn (->honeysql params))
        ]
-    (->honeysql params)))
+    (sql/format (->honeysql params))))
 
 (def mutation-request read-request)
 
