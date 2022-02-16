@@ -103,13 +103,12 @@
     [(extract-condition x)]))
 
 (defn extract-order [x]
-  (into [:order]
-    (mapv (fn [each]
-            (let [parts (split-dot each)]
-              (if (= 2 (count parts))
-                [(keyword (first parts)) (->> parts second (get order-keyword))]
-                [(keyword (first parts)) :asc])))
-          (split-comma x))))
+  (mapv (fn [each]
+          (let [parts (split-dot each)]
+            (if (= 2 (count parts))
+              [(keyword (first parts)) (->> parts second (get order-keyword))]
+              [(keyword (first parts)) :asc])))
+        (split-comma x)))
 
 (defn ->honeysql [params]
   (let [clauses (reduce-kv
