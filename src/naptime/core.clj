@@ -1,5 +1,7 @@
 (ns naptime.core
-  (:require [clojure.string :as str]
+  (:require [muuntaja.core :as m]
+            [honey.sql :as sql]
+            [clojure.string :as str]
             [ring.mock.request :as mock]
             [ring.middleware.keyword-params :as kparams]
             [reitit.ring :as ring]
@@ -8,7 +10,6 @@
             [reitit.coercion.malli :as malli]
             [reitit.interceptor.sieppari :as sieppari]
             [reitit.ring.middleware.muuntaja :as muuntaja]
-            [muuntaja.core :as m]
             [reitit.ring.middleware.parameters :as parameters]))
 
 (def logical-operators #{:or :and})
