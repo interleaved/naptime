@@ -16,6 +16,25 @@ clj -M:migrate migrate
 Now, connect to the database in your favorite repl.
 
 ```clojure
-(mount/start *db*)
-(sql/query *db* ["SELECT 1;"])
+(mount/start)
+(pp/print-table (get-tables))
+
+| :pg_namespace/table_schema | :pg_class/table_name | :table_description | :insertable |
+|----------------------------+----------------------+--------------------+-------------|
+|                  hollywood |               actors |                    |       false |
+|                  hollywood |           bacons_law |                    |       false |
+|                  hollywood |         competitions |                    |        true |
+|                  hollywood |            directors |                    |       false |
+|                  hollywood |                films |                    |        true |
+|                  hollywood |              friends |                    |       false |
+|                  hollywood |          nominations |                    |        true |
+|                  hollywood |              persons |                    |        true |
+|                  hollywood |                roles |                    |        true |
+|                  hollywood |                stats |                    |       false |
+|                     public |    schema_migrations |                    |        true |
+|                      world |          all_friends |                    |       false |
+|                      world |         competitions |                    |        true |
+|                      world |              friends |                    |        true |
+|                      world |          nominations |                    |        true |
+|                      world |              persons |                    |        true |
 ```
