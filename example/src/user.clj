@@ -1,5 +1,7 @@
 (ns user
   (:require [naptime.db :as db]
+            [naptime.core :as naptime]
+            [ring.mock.request :as mock]
             [clojure.pprint :as pp]
             [next.jdbc.sql :as sql]
             [conman.core :as conman]
@@ -14,5 +16,10 @@
 (defstate queries
   :start (db/load-queries :postgres))
 
-(defn get-tables []
-  (db/query *db* queries :all-tables))
+(defn all-tables [db]
+  (db/query db queries :all-tables))
+
+(defn many-to-one [db]
+  (db/query db queries :many-to-one))
+
+((naptime/handler *db*) (mock/request :get naptime/logical-operators-qs))

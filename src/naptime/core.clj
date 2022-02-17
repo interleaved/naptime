@@ -2,7 +2,6 @@
   (:require [muuntaja.core :as m]
             [honey.sql :as sql]
             [clojure.string :as str]
-            [ring.mock.request :as mock]
             [ring.middleware.keyword-params :as kparams]
             [reitit.ring :as ring]
             [reitit.dev.pretty :as pretty]
@@ -148,34 +147,31 @@
 (def y (atom nil))
 (def z (atom nil))
 
-(defn read-request [req]
-  (let [params (:params req)
-        target (-> req :path-params :target)
-        ;; TODO: read db structure (should read only once) and include
-        ;; the information as part of building honeysql
+(defn read-request [db]
+  (fn [req]
+    (let [params (:params req)
+          target (-> req :path-params :target)
+          ;; TODO: read db structure (should read only once) and include
+          ;; the information as part of building honeysql
 
-        ;; TODO: not a valid sql
-        _ (prn (->honeysql params))
-       ]
-    (reset! x params)
-    (reset! y (->honeysql params))
-    (reset! z (sql/format (->honeysql params)))
-    (sql/format (->honeysql params))))
 
-(def mutation-request read-request)
+          ]
+      (reset! x params)
+      (reset! y (->honeysql params))
+      (reset! z (sql/format (->honeysql params)))
+      (sql/format (->honeysql params)))))
 
-(def routes
-  ;; TODO: POST, PUT, DELETE, ignore options for now
+(defn routes [db]
   [["/:target"
-    {:get {:handler read-request}
-     :put {:handler mutation-request}}]
+    {:get {:handler (read-request db)}
+     :put {:handler (read-request db)}}]
    ["/rpc/:target"
-    {:post {:handler mutation-request}}]])
+    {:post {:handler (read-request db)}}]])
 
-(defn handler []
+(defn handler [db]
   (ring/ring-handler
    (ring/router
-    routes
+    (routes db)
     {:exception pretty/exception
      :data {:muuntaja m/instance
             :coercion malli/coercion
@@ -200,4 +196,4 @@
 (def embedded-top-level-filtering "/films?select=title,actors(first_name,last_name)&actors.first_name=eq.Jehanne")
 
 ;; embedding after insertions / updates / deletions
-((handler) (mock/request :get logical-operators-qs))
+;;
