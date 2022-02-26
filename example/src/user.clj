@@ -21,7 +21,7 @@
            (java.sql PreparedStatement Array)
            (clojure.lang IPersistentVector IPersistentMap)))
 
-(def pool-spec {:jdbc-url "jdbc:postgresql://localhost:1234/studio?user=postgres&password=tpJ4dAmQU52mdL5"})
+(def pool-spec {:jdbc-url "jdbc:postgresql://localhost:5432/naptime?user=postgres"})
 
 (defn ->pgobject [type value]
   (doto (PGobject.)
@@ -51,14 +51,28 @@
   :start (conman/connect! pool-spec)
   :stop (conman/disconnect! *db*))
 
+(defn load-queries
+  "keyword of :postgres, :mysql, etc"
+  [db-type]
+  (hugsql.core/map-of-sqlvec-fns
+   (case db-type
+     :postgres "postgres.sql")))
+
+(defn get-query [queries k & args]
+  (let [k (keyword (str (name k) "-sqlvec"))]
+    (apply (-> queries k :fn) args)))
+
+(defn query [db queries k & args]
+  (sql/query db (get-query queries k args)))
+
 (defstate queries
-  :start (db/load-queries :postgres))
+  :start (load-queries :postgres))
 
 (defn all-tables [db]
-  (db/query db queries :all-tables))
+  (query db queries :all-tables))
 
 (defn many-to-one [db]
-  (db/query db queries :many-to-one))
+  (query db queries :many-to-one))
 
 ;; the order matters, we need to know from <source-table>?select=<target-table>
 ;; and build proper honeysql :join map
