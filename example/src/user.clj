@@ -1,6 +1,5 @@
 (ns user
-  (:require [naptime.db :as db]
-            [clojure.pprint :as pp]
+  (:require [clojure.pprint :as pp]
             [jsonista.core :as json]
             [next.jdbc.sql :as sql]
             [next.jdbc.result-set :as result-set]
