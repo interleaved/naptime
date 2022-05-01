@@ -1,8 +1,5 @@
 {:deps
  {metosin/reitit {:mvn/version "0.5.15"}
-  ring/ring-mock {:mvn/version "0.4.0"}
-  ring/ring-core {:mvn/version "1.9.5"}
-  metosin/jsonista {:mvn/version "0.3.5"}
   com.layerware/hugsql-core {:mvn/version "0.5.1"}
   com.github.seancorfield/next.jdbc {:mvn/version "1.2.772"}
   com.github.seancorfield/honeysql {:mvn/version "2.2.861"}}
