@@ -17,7 +17,7 @@ Now, connect to the database in your favorite repl.
 
 ```clojure
 (mount/start)
-(pp/print-table (get-tables))
+(pp/print-table (model/all-tables))
 
 | :pg_namespace/table_schema | :pg_class/table_name | :table_description | :insertable |
 |----------------------------+----------------------+--------------------+-------------|

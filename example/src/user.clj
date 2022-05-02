@@ -1,5 +1,6 @@
 (ns user
   (:require [naptime.db :as db]
+            [naptime.model :as model]
             [clojure.pprint :as pp]
             [next.jdbc.sql :as sql]
             [conman.core :as conman]
@@ -13,9 +14,6 @@
 
 (defstate queries
   :start (db/load-queries :postgres))
-
-(defn get-tables []
-  (db/query *db* queries :all-tables))
 
 (def surnames
   ["Smith"
