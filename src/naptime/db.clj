@@ -18,11 +18,20 @@
   (sql/query db (get-query queries k args)))
 
 ;; TODO: f could be single-arity and use ks for varargs instead
-(defn honey-query [db queries ks f & args]
-  (sql/query db (hsql/format (apply f (cons (get-in queries ks) args)))))
+(defn honey-query [db queries ks f]
+  (sql/query db (hsql/format (f (get-in queries ks)))))
 
-(defn read-table [db queries table f & args]
-  (apply honey-query (concat [db queries [:read-table table] f] args)))
+(defn read-table
+  ([queries table]
+   (read-table queries table identity))
+  ([queries table f]
+   (honey-query (:datasource queries) queries [:read-table table] f)))
 
-(defn create [db queries table & args]
-  (apply honey-query (concat [db queries [:create table] hh/values] args)))
+(defn create [queries table entities]
+  (honey-query (:datasource queries) queries [:create table] #(hh/values % entities)))
+
+(defn delete
+  ([queries table]
+   (delete queries table identity))
+  ([queries table f]
+   (honey-query (:datasource queries) queries [:delete table] f)))

@@ -12,5 +12,7 @@
         tables (->> queries
                     (model/all-tables db)
                     (map (comp keyword :pg_class/table_name)))]
-    {:create (q/get-create-queries tables)
-     :read-table (q/get-read-table-queries tables)}))
+    {:datasource db
+     :create (q/get-create-queries tables)
+     :read-table (q/get-read-table-queries tables)
+     :delete (q/get-delete-queries tables)}))

@@ -16,6 +16,10 @@
 (defstate queries
   :start (nap/query-map *db*))
 
+(defn gen-professor []
+  {:first_name (rand-nth first-names)
+   :last-name (rand-nth surnames)})
+
 (def surnames
   ["Smith"
    "Johnson"

@@ -27,3 +27,13 @@
   (->> tables
        (map (juxt identity get-insert-table-query))
        (into {})))
+
+;; ---------- delete queries ----------
+
+(defn get-delete-table-query [table]
+  (-> (hh/delete-from table)))
+
+(defn get-delete-queries [tables]
+  (->> tables
+       (map (juxt identity get-delete-table-query))
+       (into {})))
