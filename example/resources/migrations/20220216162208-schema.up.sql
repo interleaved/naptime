@@ -21,6 +21,7 @@ create table class (
 create table material (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   name text not null,
+  author text,
   price money not null
 );
 --;;
