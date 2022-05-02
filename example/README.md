@@ -17,6 +17,6 @@ Now, connect to the database in your favorite repl.
 
 ```clojure
 (mount/start)
-(db/honey-query *db* queries [:read :table :class] identity)
+(db/read-table *db* queries :class identity)
 []
 ```
