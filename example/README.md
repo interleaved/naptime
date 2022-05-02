@@ -19,11 +19,11 @@ Now, connect to the database in your favorite repl.
 (mount/start)
 
 ;; create some data
-(db/create queries :professor (repeatedly 10 gen-professor))
+(queries/create queries :professor (repeatedly 10 gen-professor))
 ;=>[#:next.jdbc{:update-count 10}]
 
 ;; read some data
-(pp/print-table (db/read-table queries :professor))
+(pp/print-table (queries/read-table queries :professor))
 |                        :professor/id | :professor/first_name | :professor/last_name |
 |--------------------------------------+-----------------------+----------------------|
 | 29932f65-cc24-4d8e-91c7-77e06b64463d |                Ashley |                Baker |
@@ -38,6 +38,6 @@ Now, connect to the database in your favorite repl.
 | b7c42434-0b45-4b94-bab6-1a0a83ac7542 |               Jessica |            Rodriguez |
 
 ;; delete some data
-(db/delete queries :professor)
+(queries/delete queries :professor)
 [#:next.jdbc{:update-count 10}]
 ```

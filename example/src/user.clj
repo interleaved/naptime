@@ -1,9 +1,7 @@
 (ns user
-  (:require [naptime.db :as db]
-            [naptime.model :as model]
-            [naptime.core :as nap]
+  (:require [naptime.core :as nap]
+            [naptime.layers.queries.core :as queries]
             [clojure.pprint :as pp]
-            [next.jdbc.sql :as sql]
             [conman.core :as conman]
             [mount.core :as mount :refer [defstate]]))
 
@@ -14,11 +12,7 @@
   :stop (conman/disconnect! *db*))
 
 (defstate queries
-  :start (nap/query-map *db*))
-
-(defn gen-professor []
-  {:first_name (rand-nth first-names)
-   :last-name (rand-nth surnames)})
+  :start (-> *db* nap/init-meta nap/init-queries))
 
 (def surnames
   ["Smith"
@@ -325,3 +319,7 @@
    {:book "Mrs Dalloway" :author "Virginia Woolf"}
    {:book "To the Lighthouse" :author "Virginia Woolf"}
    {:book "Memoirs of Hadrian" :author "Marguerite Yourcenar"}])
+
+(defn gen-professor []
+  {:first_name (rand-nth first-names)
+   :last-name (rand-nth surnames)})

@@ -1,18 +1,26 @@
 (ns naptime.core
-  (:require [naptime.db :as db]
-            [naptime.queries :as q]
-            [naptime.model :as model]
-            [honey.sql.helpers :as hh]))
+  (:require [naptime.layers.meta.core :as meta]
+            [naptime.layers.queries.core :as queries]))
 
 ;; don't need this yet but
 ;; host->database->schema->table
 
-(defn query-map [db]
-  (let [queries (db/load-queries :postgres)
-        tables (->> queries
-                    (model/all-tables db)
+(defn init-meta [datasource]
+  (let [queries (meta/load-queries :postgres)]
+    {:datasource datasource
+     :meta/all-tables (partial meta/all-tables datasource queries)
+     :meta/all-columns (partial meta/all-columns datasource queries)
+     :meta/many-to-one (partial meta/many-to-one datasource queries)
+     :meta/all-primary-keys (partial meta/all-primary-keys datasource queries)
+     :meta/all-stored-procedures (partial meta/all-stored-procedures datasource queries)
+     :meta/primary-and-foreign-keys-referenced-in-views
+     (partial meta/primary-and-foreign-keys-referenced-in-views datasource queries)}))
+
+(defn init-queries [meta]
+  (let [tables (->> ((:meta/all-tables meta))
                     (map (comp keyword :pg_class/table_name)))]
-    {:datasource db
-     :create (q/get-create-queries tables)
-     :read-table (q/get-read-table-queries tables)
-     :delete (q/get-delete-queries tables)}))
+    (assoc
+     meta
+     :queries/create (queries/get-create-queries tables)
+     :queries/read-table (queries/get-read-table-queries tables)
+     :queries/delete (queries/get-delete-queries tables))))

@@ -1,11 +1,29 @@
-(ns naptime.queries
-  (:require [naptime.model :as model]
+(ns naptime.layers.queries.core
+  (:require [next.jdbc.sql :as sql]
+            [honey.sql :as hsql]
             [honey.sql.helpers :as hh]))
 
-;; TODO: also build read queries for views
+(defn query [db queries ks f]
+  (sql/query db (hsql/format (f (get-in queries ks)))))
+
+(defn read-table
+  ([queries table]
+   (read-table queries table identity))
+  ([queries table f]
+   (query (:datasource queries) queries [:queries/read-table table] f)))
+
+(defn create [queries table entities]
+  (query (:datasource queries) queries [:queries/create table] #(hh/values % entities)))
+
+(defn delete
+  ([queries table]
+   (delete queries table identity))
+  ([queries table f]
+   (query (:datasource queries) queries [:queries/delete table] f)))
 
 ;; ---------- read-table queries ----------
 
+;; TODO: also build read queries for views
 ;; TODO: specify columns
 ;; TODO: incorporate joins
 
