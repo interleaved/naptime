@@ -37,7 +37,13 @@ Now, connect to the database in your favorite repl.
 | 9eca687f-a88f-47e7-9ddc-2d7bb6faa1ad |               Richard |              Jimenez |
 | b7c42434-0b45-4b94-bab6-1a0a83ac7542 |               Jessica |            Rodriguez |
 
+;; update some data
+(queries/update-table queries :professor
+  {:professor/first_name "Jamie"}
+  [:= :professor/id (java.util.UUID/fromString "84a7a47a-7d99-4e4e-8ad5-8dc5b8265ed2")])
+;=>[#:next.jdbc{:update-count 1}]
+
 ;; delete some data
 (queries/delete queries :professor)
-[#:next.jdbc{:update-count 10}]
+;=>[#:next.jdbc{:update-count 10}]
 ```

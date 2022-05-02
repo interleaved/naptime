@@ -23,4 +23,5 @@
      meta
      :queries/create (queries/get-create-queries tables)
      :queries/read-table (queries/get-read-table-queries tables)
-     :queries/delete (queries/get-delete-queries tables))))
+     :queries/delete (queries/get-delete-queries tables)
+     :queries/update (queries/get-update-queries tables))))
