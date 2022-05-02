@@ -95,7 +95,7 @@ FROM
 						pg_get_expr(
 							ad.adbin,
 							ad.adrelid
-						)::STRING
+						)::TEXT
 							AS column_default,
 						NOT
 							(
@@ -109,12 +109,12 @@ FROM
 						THEN CASE
 						WHEN bt.typelem != 0::OID
 						AND bt.typlen = (-1)
-						THEN 'ARRAY'::STRING
+						THEN 'ARRAY'::TEXT
 						WHEN nbt.nspname
 						= 'pg_catalog'::NAME
 						THEN format_type(
 							t.typbasetype,
-							NULL::INT8
+							NULL
 						)
 						ELSE format_type(
 							a.atttypid,
@@ -124,18 +124,18 @@ FROM
 						ELSE CASE
 						WHEN t.typelem != 0::OID
 						AND t.typlen = (-1)
-						THEN 'ARRAY'::STRING
+						THEN 'ARRAY'::TEXT
 						WHEN nt.nspname = 'pg_catalog'::NAME
 						THEN format_type(
 							a.atttypid,
-							NULL::INT8
+							NULL
 						)
 						ELSE format_type(
 							a.atttypid,
 							a.atttypmod
 						)
 						END
-						END::STRING
+						END::TEXT
 							AS data_type,
 						information_schema._pg_char_max_length(
 							information_schema._pg_truetypid(
