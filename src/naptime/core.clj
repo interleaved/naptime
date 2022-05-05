@@ -1,6 +1,6 @@
 (ns naptime.core
-  (:require [naptime.layers.meta.core :as meta]
-            [naptime.layers.queries.core :as queries]))
+  (:require [naptime.layers.meta :as meta]
+            [naptime.layers.query :as query]))
 
 ;; don't need this yet but
 ;; host->database->schema->table
@@ -17,11 +17,4 @@
      (partial meta/primary-and-foreign-keys-referenced-in-views datasource queries)}))
 
 (defn init-queries [meta]
-  (let [tables (->> ((:meta/all-tables meta))
-                    (map (comp keyword :pg_class/table_name)))]
-    (assoc
-     meta
-     :queries/create (queries/get-create-queries tables)
-     :queries/read-table (queries/get-read-table-queries tables)
-     :queries/delete (queries/get-delete-queries tables)
-     :queries/update (queries/get-update-queries tables))))
+  (-> meta query/get-create-fns))

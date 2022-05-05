@@ -1,0 +1,8 @@
+<S> = column (<','> column)*
+column = table-name? column-name (desc|asc)? (nullsfirst|nullslast)?
+desc = <'.desc'>
+asc = <'.asc'>
+nullsfirst = <'.nullsfirst'>
+nullslast = <'.nullslast'>
+table-name = #'[a-zA-Z0-9_]+'
+column-name = <'.'?> #'[a-zA-Z0-9_]+'

@@ -1,4 +1,4 @@
-(ns naptime.layers.meta.core
+(ns naptime.layers.meta
   (:require [next.jdbc.sql :as sql]
             [hugsql.core :as hugsql]))
 
@@ -8,7 +8,7 @@
   [db-type]
   (hugsql.core/map-of-sqlvec-fns
    (case db-type
-     :postgres "postgres.sql")))
+     :postgres "queries/postgres.sql")))
 
 (defn get-query [queries k & args]
   (apply (-> queries k :fn) args))

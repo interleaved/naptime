@@ -39,232 +39,151 @@ SELECT
 
 -- :name all-columns :? :*
 -- :doc get information on all non-key/non-fk columns in the database
-SELECT
-	DISTINCT
-	info.table_schema AS schema,
-	info.table_name AS table_name,
-	info.column_name AS name,
-	info.description AS description,
-	info.ordinal_position AS position,
-	info.is_nullable::BOOL AS nullable,
-	info.data_type AS col_type,
-	info.is_updatable::BOOL AS updatable,
-	info.character_maximum_length AS max_len,
-	info.numeric_precision AS precision,
-	info.column_default AS default_value,
-	array_to_string(enum_info.vals, ',') AS enum
-FROM
-	(
-		WITH
-			key_columns
-				AS (
-					SELECT
-						r.oid AS r_oid,
-						c.oid AS c_oid,
-						n.nspname,
-						c.relname,
-						r.conname,
-						r.contype,
-						unnest(r.conkey) AS conkey
-					FROM
-						pg_catalog.pg_constraint AS r,
-						pg_catalog.pg_class AS c,
-						pg_catalog.pg_namespace AS n
-					WHERE
-						r.contype IN ('f', 'p', 'u')
-						AND c.relkind
-							IN ('r', 'v', 'f', 'm')
-						AND r.conrelid = c.oid
-						AND c.relnamespace = n.oid
-						AND n.nspname
-							!= ANY (
-									ARRAY[
-										'pg_catalog',
-										'information_schema'
-									]
-								)
-				),
-			columns
-				AS (
-					SELECT
-						nc.nspname::NAME AS table_schema,
-						c.relname::NAME AS table_name,
-						a.attname::NAME AS column_name,
-						d.description AS description,
-						a.attnum::INT8 AS ordinal_position,
-						pg_get_expr(
-							ad.adbin,
-							ad.adrelid
-						)::STRING
-							AS column_default,
-						NOT
-							(
-								a.attnotnull
-								OR t.typtype = 'd'
-									AND t.typnotnull
-							)
-							AS is_nullable,
-						CASE
-						WHEN t.typtype = 'd'
-						THEN CASE
-						WHEN bt.typelem != 0::OID
-						AND bt.typlen = (-1)
-						THEN 'ARRAY'::STRING
-						WHEN nbt.nspname
-						= 'pg_catalog'::NAME
-						THEN format_type(
-							t.typbasetype,
-							NULL::INT8
-						)
-						ELSE format_type(
-							a.atttypid,
-							a.atttypmod
-						)
-						END
-						ELSE CASE
-						WHEN t.typelem != 0::OID
-						AND t.typlen = (-1)
-						THEN 'ARRAY'::STRING
-						WHEN nt.nspname = 'pg_catalog'::NAME
-						THEN format_type(
-							a.atttypid,
-							NULL::INT8
-						)
-						ELSE format_type(
-							a.atttypid,
-							a.atttypmod
-						)
-						END
-						END::STRING
-							AS data_type,
-						information_schema._pg_char_max_length(
-							information_schema._pg_truetypid(
-								a.*,
-								t.*
-							),
-							information_schema._pg_truetypmod(
-								a.*,
-								t.*
-							)
-						)::INT8
-							AS character_maximum_length,
-						information_schema._pg_numeric_precision(
-							information_schema._pg_truetypid(
-								a.*,
-								t.*
-							),
-							information_schema._pg_truetypmod(
-								a.*,
-								t.*
-							)
-						)::INT8
-							AS numeric_precision,
-						COALESCE(
-							bt.typname,
-							t.typname
-						)::NAME
-							AS udt_name,
-						(
-							c.relkind IN ('r', 'v', 'f')
-							AND pg_column_is_updatable(
-									c.oid::REGCLASS,
-									a.attnum,
-									false
-								)
-						)::BOOL
-							AS is_updatable
-					FROM
-						pg_attribute AS a
-						LEFT JOIN key_columns AS kc ON
-								kc.conkey = a.attnum
-								AND kc.c_oid = a.attrelid
-						LEFT JOIN pg_catalog.pg_description
-								AS d ON
-								d.objoid = a.attrelid
-								AND d.objsubid = a.attnum
-						LEFT JOIN pg_attrdef AS ad ON
-								a.attrelid = ad.adrelid
-								AND a.attnum = ad.adnum
-						JOIN (
-								pg_class AS c
-								JOIN pg_namespace AS nc ON
-										c.relnamespace
-										= nc.oid
-							) ON a.attrelid = c.oid
-						JOIN (
-								pg_type AS t
-								JOIN pg_namespace AS nt ON
-										t.typnamespace
-										= nt.oid
-							) ON a.atttypid = t.oid
-						LEFT JOIN (
-								pg_type AS bt
-								JOIN pg_namespace AS nbt ON
-										bt.typnamespace
-										= nbt.oid
-							) ON
-								t.typtype = 'd'
-								AND t.typbasetype = bt.oid
-						LEFT JOIN (
-								pg_collation AS co
-								JOIN pg_namespace AS nco ON
-										co.collnamespace
-										= nco.oid
-							) ON
-								a.attcollation = co.oid
-								AND (
-										nco.nspname
-										!= 'pg_catalog'::NAME
-										OR co.collname
-											!= 'default'::NAME
-									)
-					WHERE
-						NOT pg_is_other_temp_schema(nc.oid)
-						AND a.attnum > 0
-						AND NOT a.attisdropped
-						AND c.relkind
-							IN ('r', 'v', 'f', 'm')
-						AND (kc.r_oid IS NOT NULL)
-				)
-		SELECT
-			table_schema,
-			table_name,
-			column_name,
-			description,
-			ordinal_position,
-			is_nullable,
-			data_type,
-			is_updatable,
-			character_maximum_length,
-			numeric_precision,
-			column_default,
-			udt_name
-		FROM
-			columns
-		WHERE
-			table_schema
-			NOT IN ('pg_catalog', 'information_schema')
-	)
-		AS info
-	LEFT JOIN (
-			SELECT
-				n.nspname AS s,
-				t.typname AS n,
-				array_agg(
-					e.enumlabel ORDER BY e.enumsortorder
-				)
-					AS vals
-			FROM
-				pg_type AS t
-				JOIN pg_enum AS e ON t.oid = e.enumtypid
-				JOIN pg_catalog.pg_namespace AS n ON
-						n.oid = t.typnamespace
-			GROUP BY
-				s, n
-		)
-			AS enum_info ON (info.udt_name = enum_info.n)
-ORDER BY
-	schema, "position";
+select
+	distinct info.table_schema as schema,
+	info.table_name as table_name,
+	info.column_name as name,
+	info.description as description,
+	info.ordinal_position as position,
+	info.is_nullable::BOOL as nullable,
+	info.data_type as col_type,
+	info.is_updatable::BOOL as updatable,
+	info.character_maximum_length as max_len,
+	info.numeric_precision as precision,
+	info.column_default as default_value,
+	array_to_string(enum_info.vals, ',') as enum
+from
+	( with key_columns as (
+	select
+		r.oid as r_oid,
+		c.oid as c_oid,
+		n.nspname,
+		c.relname,
+		r.conname,
+		r.contype,
+		unnest(r.conkey) as conkey
+	from
+		pg_catalog.pg_constraint as r,
+		pg_catalog.pg_class as c,
+		pg_catalog.pg_namespace as n
+	where
+		r.contype in ('f', 'p', 'u')
+		and c.relkind in ('r', 'v', 'f', 'm')
+		and r.conrelid = c.oid
+		and c.relnamespace = n.oid
+		and n.nspname != any ( array[ 'pg_catalog',
+		'information_schema' ]) ),
+	columns as (
+	select
+		nc.nspname::NAME as table_schema,
+		c.relname::NAME as table_name,
+		a.attname::NAME as column_name,
+		d.description as description,
+		a.attnum::INT8 as ordinal_position,
+		pg_get_expr( ad.adbin,
+		ad.adrelid )::text as column_default,
+		not ( a.attnotnull
+			or t.typtype = 'd'
+			and t.typnotnull ) as is_nullable,
+		case
+			when t.typtype = 'd' then
+			case
+				when bt.typelem != 0::OID
+				and bt.typlen = (-1) then 'ARRAY'::text
+				when nbt.nspname = 'pg_catalog'::NAME then format_type( t.typbasetype, null )
+				else format_type( a.atttypid, a.atttypmod )
+			end
+			else
+			case
+				when t.typelem != 0::OID
+					and t.typlen = (-1) then 'ARRAY'::text
+					when nt.nspname = 'pg_catalog'::NAME then format_type( a.atttypid, null )
+					else format_type( a.atttypid, a.atttypmod )
+				end
+			end::text as data_type,
+			information_schema._pg_char_max_length( information_schema._pg_truetypid( a.*,
+			t.* ),
+			information_schema._pg_truetypmod( a.*,
+			t.* ) )::INT8 as character_maximum_length,
+			information_schema._pg_numeric_precision( information_schema._pg_truetypid( a.*,
+			t.* ),
+			information_schema._pg_truetypmod( a.*,
+			t.* ) )::INT8 as numeric_precision,
+			coalesce( bt.typname, t.typname )::NAME as udt_name,
+			( c.relkind in ('r', 'v', 'f')
+				and pg_column_is_updatable( c.oid::REGCLASS,
+				a.attnum,
+				false ) )::BOOL as is_updatable
+		from
+			pg_attribute as a
+		left join key_columns as kc on
+			kc.conkey = a.attnum
+			and kc.c_oid = a.attrelid
+		left join pg_catalog.pg_description as d on
+			d.objoid = a.attrelid
+			and d.objsubid = a.attnum
+		left join pg_attrdef as ad on
+			a.attrelid = ad.adrelid
+			and a.attnum = ad.adnum
+		join ( pg_class as c
+		join pg_namespace as nc on
+			c.relnamespace = nc.oid ) on
+			a.attrelid = c.oid
+		join ( pg_type as t
+		join pg_namespace as nt on
+			t.typnamespace = nt.oid ) on
+			a.atttypid = t.oid
+		left join ( pg_type as bt
+		join pg_namespace as nbt on
+			bt.typnamespace = nbt.oid ) on
+			t.typtype = 'd'
+				and t.typbasetype = bt.oid
+			left join ( pg_collation as co
+			join pg_namespace as nco on
+				co.collnamespace = nco.oid ) on
+				a.attcollation = co.oid
+					and ( nco.nspname != 'pg_catalog'::NAME
+						or co.collname != 'default'::NAME )
+				where
+					not pg_is_other_temp_schema(nc.oid)
+						and a.attnum > 0
+						and not a.attisdropped
+						and c.relkind in ('r', 'v', 'f', 'm'))
+	select
+		table_schema,
+		table_name,
+		column_name,
+		description,
+		ordinal_position,
+		is_nullable,
+		data_type,
+		is_updatable,
+		character_maximum_length,
+		numeric_precision,
+		column_default,
+		udt_name
+	from
+		columns
+	where
+		table_schema not in ('pg_catalog', 'information_schema') ) as info
+left join (
+	select
+		n.nspname as s,
+		t.typname as n,
+		array_agg( e.enumlabel order by e.enumsortorder ) as vals
+	from
+		pg_type as t
+	join pg_enum as e on
+		t.oid = e.enumtypid
+	join pg_catalog.pg_namespace as n on
+		n.oid = t.typnamespace
+	group by
+		s,
+		n ) as enum_info on
+	(info.udt_name = enum_info.n)
+order by
+	schema,
+	"position";
 
 -- :name many-to-one :? :*
 -- :doc get information on foriegn keys

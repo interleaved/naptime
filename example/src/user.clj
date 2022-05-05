@@ -1,6 +1,7 @@
 (ns user
   (:require [naptime.core :as nap]
-            [naptime.layers.queries.core :as queries]
+            [naptime.layers.dsl :as dsl]
+            [naptime.layers.honey :as honey]
             [clojure.pprint :as pp]
             [conman.core :as conman]
             [mount.core :as mount :refer [defstate]]))
@@ -322,4 +323,4 @@
 
 (defn gen-professor []
   {:first_name (rand-nth first-names)
-   :last-name (rand-nth surnames)})
+   :last_name (rand-nth surnames)})
