@@ -1,6 +1,7 @@
 (ns naptime.core
   (:require [naptime.layers.meta :as meta]
-            [naptime.layers.query :as query]))
+            [naptime.layers.query :as query]
+            [naptime.layers.route :as route]))
 
 ;; don't need this yet but
 ;; host->database->schema->table
@@ -18,3 +19,6 @@
 
 (defn init-queries [meta]
   (-> meta query/get-create-fns))
+
+(defn init-router [meta prefix]
+  (route/build-routes meta prefix))

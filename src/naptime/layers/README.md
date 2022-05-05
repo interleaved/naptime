@@ -17,3 +17,7 @@ The next layer up contains functions for translating the parsed DSL into a honey
 # 4 - query
 
 Layer four ties the previous 3 layers together and produces a map of <action>-<entity> to function. This layer will perform queries.
+
+# 5 - router
+
+Layer 5 produces routes which map to level 4.  They are consumable by reitit.
