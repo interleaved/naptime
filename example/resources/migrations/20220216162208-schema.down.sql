@@ -10,6 +10,8 @@ drop table class;
 --;;
 drop table professor;
 --;;
+drop table address;
+--;;
 drop extension "uuid-ossp";
 --;;
 drop extension pgcrypto;

@@ -3,10 +3,17 @@ create extension pgcrypto;
 --;;
 create extension "uuid-ossp";
 --;;
+create table address (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  address text not null
+);
+--;;
 create table professor (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   first_name text not null,
-  last_name text not null
+  last_name text not null,
+  address UUID,
+  CONSTRAINT professor_address_key FOREIGN KEY (address) REFERENCES address(id)
 );
 --;;
 create table class (
@@ -26,22 +33,24 @@ create table material (
 );
 --;;
 create table class_material (
-  class_id UUID,
-  material_id UUID,
-  CONSTRAINT class_material_class_key FOREIGN KEY (class_id) REFERENCES class(id),
-  CONSTRAINT class_material_material_key FOREIGN KEY (material_id) REFERENCES material(id)
+  class UUID,
+  material UUID,
+  CONSTRAINT class_material_class_key FOREIGN KEY (class) REFERENCES class(id),
+  CONSTRAINT class_material_material_key FOREIGN KEY (material) REFERENCES material(id)
 )
 --;;
 create table student (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   first_name text not null,
-  last_name text not null
+  last_name text not null,
+  address UUID,
+  CONSTRAINT student_address_key FOREIGN KEY (address) REFERENCES address(id)
 );
 --;;
 create table class_student (
-  class_id UUID,
-  student_id UUID,
-  CONSTRAINT class_student_class_key FOREIGN KEY (class_id) REFERENCES class(id),
-  CONSTRAINT class_student_student_key FOREIGN KEY (student_id) REFERENCES student(id)
+  class UUID,
+  student UUID,
+  CONSTRAINT class_student_class_key FOREIGN KEY (class) REFERENCES class(id),
+  CONSTRAINT class_student_student_key FOREIGN KEY (student) REFERENCES student(id)
 )
 --;;

@@ -6,7 +6,7 @@
             [conman.core :as conman]
             [mount.core :as mount :refer [defstate]]))
 
-(def pool-spec {:jdbc-url "jdbc:postgresql://localhost/university?user=postgres&password=password"})
+(def pool-spec {:jdbc-url "jdbc:postgresql://localhost/university?user=postgres"})
 
 (defstate ^:dynamic *db*
   :start (conman/connect! pool-spec)
