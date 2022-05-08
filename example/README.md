@@ -46,6 +46,9 @@ The graph layer is built out already.
 (graph/find-path g "class" "material")
 ;=> ["class_material_material_key" "class_material_class_key"]
 
+(graph/find-path g "material" "class")
+;=> ["class_material_class_key" "class_material_material_key"]
+
 ;; naptime can't select a path if more than one path exists
 (graph/find-path g "class" "address")
 ;=> nil
