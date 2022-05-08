@@ -66,8 +66,8 @@
 (defn order-nodes [g from to fk]
   (when-let [[mid1 mid2 _] (lookup-constraint g fk)]
     (cond
-      (and (= from mid1) (= to mid2)) [:0-jump fk]
-      (and (= from mid2) (= to mid1)) [:0-jump fk]
+      (and (= from mid1) (= to mid2)) [:0-jump []]
+      (and (= from mid2) (= to mid1)) [:0-jump []]
       (= to mid1) [:1-jump [from mid2]]
       (= to mid2) [:1-jump [from mid1]]
       (= from mid1) [:2-jump [mid2 to]]
