@@ -431,7 +431,7 @@ with recursive
         join pg_namespace n on n.oid = c.relnamespace
         join pg_rewrite r on r.ev_class = c.oid
         where c.relkind in ('v', 'm')
-        -- and n.nspname = ANY($1 || $2)
+          and n.nspname = 'public'
       ),
       transform_json as (
         select
@@ -554,5 +554,5 @@ with recursive
       join pg_attribute col on col.attrelid = tbl.oid and col.attnum = rec.resorigcol
       join pg_attribute vcol on vcol.attrelid = rec.view_id and vcol.attnum = rec.view_column
       join pg_namespace sch on sch.oid = tbl.relnamespace
-      join pks_fks using (resorigtbl, resorigcol)
+      left join pks_fks using (resorigtbl, resorigcol)
       order by view_schema, view_name, view_column_name;

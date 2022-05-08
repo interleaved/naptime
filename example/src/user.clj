@@ -2,6 +2,8 @@
   (:require [naptime.core :as nap]
             [naptime.layers.dsl :as dsl]
             [naptime.layers.honey :as honey]
+            [naptime.layers.graph :as graph]
+            [ubergraph.core :refer [viz-graph]]
             [clojure.pprint :as pp]
             [conman.core :as conman]
             [mount.core :as mount :refer [defstate]]))
@@ -321,6 +323,24 @@
    {:book "To the Lighthouse" :author "Virginia Woolf"}
    {:book "Memoirs of Hadrian" :author "Marguerite Yourcenar"}])
 
+(def street-names
+  ["st" "rd" "way" "circle"])
+
+(def subjects
+  ["maths" "physics" "computer science"
+   "chemistry" "meteorology" "astronomy"
+   "literature" "philosophy" "theater"
+   "psychology" "sociology"
+   "business" "economics"])
+
 (defn gen-professor []
   {:first_name (rand-nth first-names)
    :last_name (rand-nth surnames)})
+
+(defn gen-address []
+  {:address (str (rand-nth surnames) " " (rand-nth street-names))})
+
+(defn gen-class []
+  {:title (rand-nth subjects)
+   :num (+ (inc (rand-int 4)) (rand-nth [100 200 300 400]))
+   :hours (inc (rand-int 3))})

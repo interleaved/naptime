@@ -10,14 +10,15 @@ This is the lowest possible layer.  It contains queries which gather information
 
 The next layer up contains a parser for translating postgrest-style query parameters to a usable hiccup-style data structure.
 
-# 3 - honey
+# 3 - graph
+
+The next layer up contains functions for turning the database into a graph and doing path-finding from one table to another.
+
+# 4 - honey
 
 The next layer up contains functions for translating the parsed DSL into a honeysql map.
 
-# 4 - query
+# 5 - query
 
-Layer four ties the previous 3 layers together and produces a map of <action>-<entity> to function. This layer will perform queries.
+Layer four ties the previous layers together and produces a map of <action>-<entity> to function. This layer will perform queries.
 
-# 5 - router
-
-Layer 5 produces routes which map to level 4.  They are consumable by reitit.

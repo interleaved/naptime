@@ -21,7 +21,7 @@ create table class (
   title text not null,
   num int not null,
   hours int not null,
-  professor UUID NOT NULL,
+  professor UUID,
   CONSTRAINT class_professor_key FOREIGN KEY (professor) REFERENCES professor(id)
 );
 --;;
@@ -43,8 +43,10 @@ create table student (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   first_name text not null,
   last_name text not null,
-  address UUID,
-  CONSTRAINT student_address_key FOREIGN KEY (address) REFERENCES address(id)
+  billing_address UUID,
+  shipping_address UUID,
+  CONSTRAINT student_billing_address_key FOREIGN KEY (billing_address) REFERENCES address(id),
+  CONSTRAINT student_shipping_address_key FOREIGN KEY (shipping_address) REFERENCES address(id)
 );
 --;;
 create table class_student (
