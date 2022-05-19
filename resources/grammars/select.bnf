@@ -1,21 +1,27 @@
 <S> = token (<','> token)*
-<token> = (table-column|column|table)
-<column> = (wildcard|regular-column|renamed-column|typed-column|json-column)
+<token> = (table / column )
+
+<table> = (table-columns / table-hint / table-alias)
+
+table-hint = table-name <#'!(?!inner)'> (table-columns / table-alias)
+table-alias = table-name <':'> table-columns
+table-columns = table-name bang-inner? <'('> S <')'>
+
+<column> = (wildcard / json-column / typed-column / renamed-column / regular-column)
+
 wildcard = <'*'>
-table-column = (table-name <'.'>)* column
-regular-column = #'[a-zA-Z0-9_]+'
-renamed-column = regular-column <':'> regular-column
+json-column = (regular-column (json-key / json-nth))+ (typed-column / renamed-column / regular-column)
 typed-column = regular-column <'::'> type
-<type> = (regular-type|complex-type)
+renamed-column = regular-column <':'> regular-column
+regular-column = #'[a-zA-Z0-9_]+'
+
+<type> = (complex-type / regular-type)
 regular-type = #'[a-zA-Z0-9_ ]+'
 complex-type = regular-type <'('> number (<','> number)* <')'>
 number = #'[0-9]+'
-json-column = (regular-column (json-nth|json-key))+ column
+
 json-key = <'->>'>
 json-nth = <'->'>
-<table> = (table-columns|table-alias|table-hint)
-table-columns = table-name <bang-inner?> <'('> S <')'>
+
 table-name = #'[a-zA-Z0-9_]+'
-table-alias = table-name <':'> table-columns
-bang-inner = '!inner'
-table-hint = table-name <'!'> (table-columns|table-alias)
+bang-inner = <'!inner'>

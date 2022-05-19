@@ -74,7 +74,8 @@
 (deftest ambiguity-test
   (with-redefs [insta/parse insta/parses]
     (testing "zero select ambiguites"
-      (is (every? #(== % 1) (map (comp count second dsl/parse-param) (select-inputs "select")))))))
+      (doseq [[input ast] (map (juxt identity (comp second dsl/parse-param)) (select-inputs "select"))]
+        (is (== 1 (count ast)) input)))))
 
 ;; from this file: https://github.com/PostgREST/postgrest/blob/main/test/spec/Feature/Query/QuerySpec.hs
 (deftest dsl-tests
