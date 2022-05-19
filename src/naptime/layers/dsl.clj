@@ -29,7 +29,7 @@
       [[:subor (insta/parse select-grammar (sg/replace type ".or" "") :start :token)]
        (insta/parse filter-grammar dsl :start :or-body)]
       :else
-      [(insta/parse select-grammar type :start :token) ;; TODO: we might need to vec this since it wraps in () not list literal
+      [(insta/parse select-grammar type :start :token)
        (insta/parse filter-grammar dsl)])))
 
 (defn parse-params [params]
