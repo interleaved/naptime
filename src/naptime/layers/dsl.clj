@@ -1,11 +1,11 @@
 (ns naptime.layers.dsl
   (:require [clojure.string :as sg]
             [clojure.java.io :as io]
-            [instaparse.core :as insta]))
+            [instaparse.core :as insta :refer [defparser]]))
 
-(def select-grammar (insta/parser (io/resource "grammars/select.bnf")))
-(def order-grammar (insta/parser (io/resource "grammars/order.bnf")))
-(def filter-grammar (insta/parser (io/resource "grammars/filter.bnf")))
+(defparser select-grammar (io/resource "grammars/select.bnf"))
+(defparser order-grammar (io/resource "grammars/order.bnf"))
+(defparser filter-grammar (io/resource "grammars/filter.bnf"))
 
 (defn parse-param [[type dsl]]
   (case type
@@ -29,7 +29,7 @@
       [[:subor (insta/parse select-grammar (sg/replace type ".or" "") :start :token)]
        (insta/parse filter-grammar dsl :start :or-body)]
       :else
-      [(insta/parse select-grammar type :start :token)
+      [(insta/parse select-grammar type :start :token) ;; TODO: we might need to vec this since it wraps in () not list literal
        (insta/parse filter-grammar dsl)])))
 
 (defn parse-params [params]
