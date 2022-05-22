@@ -2,6 +2,8 @@
   (:require [ring.mock.request :as mock]
             [clojure.test :refer :all]
             [naptime.layers.dsl :as dsl]
+            [ring.util.codec :as codec]
+            [ring.util.response :as response]
             [ring.middleware.params :as params]
             [instaparse.core :as insta]))
 
@@ -199,5 +201,70 @@
 
   (testing "matches with ilike"
     (testing "suffix"
-      (is (= [[[[:regular-column "k"]] [[:condition [:op [:ilike [:bare-string "xy*"]]]]]]]
-             (dsl/parse-params (query-params "/simple_pk?k=ilike.xy*&order=extra.asc"))))))
+      (is (= [[[[:regular-column "k"]]
+               [[:condition [:op [:ilike [:bare-string "xy*"]]]]]]
+              [:order [[:column [:column-name "extra"] [:asc]]]]]
+             (dsl/parse-params (query-params "/simple_pk?k=ilike.xy*&order=extra.asc")))))
+
+    (testing "prefix suffix"
+      (is (= [[[[:regular-column "k"]]
+               [[:condition [:op [:ilike [:bare-string "*YY*"]]]]]]
+              [:order [[:column [:column-name "extra"] [:asc]]]]]
+             (dsl/parse-params (query-params "/simple_pk?k=ilike.*YY*&order=extra.asc"))))))
+
+  (testing "matches with ilike using not operator"
+    ;; TODO: not
+    (is (= [[[[:regular-column "k"]]
+             [[:condition [:column-name "not"] [:op [:ilike [:bare-string "xy*"]]]]]]
+            [:order [[:column [:column-name "extra"] [:asc]]]]]
+           (dsl/parse-params (query-params "/simple_pk?k=not.ilike.xy*&order=extra.asc")))))
+
+  (testing "matches with ~"
+    (testing "terminating dollar sign"
+      (is (= [[[[:regular-column "k"]] [[:condition [:op [:match [:bare-string "yx$"]]]]]]]
+             (dsl/parse-params (query-params "/simple_pk?k=match.yx$")))))
+
+    (testing "head sign prefix"
+      (is (= [[[[:regular-column "k"]] [[:condition [:op [:match [:bare-string "^xy"]]]]]]]
+             (dsl/parse-params (query-params
+                                "/simple_pk?k=match.%5Exy")))))
+    (testing "match regular"
+      (is (= [[[[:regular-column "k"]] [[:condition [:op [:match [:bare-string "YY"]]]]]]]
+             (dsl/parse-params (query-params
+                                "/simple_pk?k=match.YY"))))))
+
+  (testing "matches with ~ using not operator"
+    ;; TODO: not
+    (is (= [[[[:regular-column "k"]]
+             [[:condition [:column-name "not"] [:op [:match [:bare-string "yx$"]]]]]]]
+           (dsl/parse-params (query-params "/simple_pk?k=not.match.yx$")))))
+
+  (testing "matches with ~*" ;; case-insensitive
+    #_(dsl/parse-params (query-params "/simple_pk?k=imatch.^xy&order=extra.asc"))
+    #_(dsl/parse-params (query-params "/simple_pk?k=imatch..*YY.*&order=extra.asc"))))
+
+(deftest url-encoded-query-component-tests
+  (testing "uri with ^ sign is not valid"
+    (try
+      (query-params "/simple_pk?k=match.^xy")
+      (catch java.net.URISyntaxException _
+        (is true))))
+
+  (testing "by default, server won't decode url-encoded url"
+    (is (empty? (query-params (codec/url-encode "/simple_pk?k=match.^xy")))))
+
+  (testing "with form encoded" ;; form encoded only applies to body
+    (is (empty?
+         (-> (mock/request :get (codec/url-encode "/simple_pk?k=match.^xy"))
+             (response/update-header "Content-Type" (constantly "application/x-www-form-urlencoded"))
+             params/params-request
+             :query-params)))
+    (is (empty?
+         (-> (mock/request :get (codec/form-encode "/simple_pk?k=match.^xy"))
+             (response/update-header "Content-Type" (constantly "application/x-www-form-urlencoded"))
+             params/params-request
+             :query-params))))
+
+  (testing "work if we url-encode just the component part"
+    (is (= {"k" "match.^xy"}
+           (query-params (str "/simple_pk?k=" (codec/url-encode "match.^xy")))))))
