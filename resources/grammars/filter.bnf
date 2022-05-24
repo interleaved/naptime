@@ -1,7 +1,7 @@
 <S> = condition (<','> condition)*
 condition = not? table-name? column-name? op
 not = <'not.'>
-op = (eq|gt|gte|lt|lte|neq|like|ilike|in|is|fts|plfts|phfts|wfts|or|and)
+op = (eq|gt|gte|lt|lte|neq|like|ilike|in|is|fts|plfts|phfts|wfts|or|and|match|imatch)
 eq = <dot? 'eq' dot> value
 gt = <dot? 'gt' dot> value
 gte = <dot? 'gte' dot> value
@@ -16,6 +16,8 @@ fts = <dot? 'fts'> locale <dot> text-value / <'fts.'> text-value
 plfts = <dot? 'plfts' dot> text-value
 phfts = <dot? 'phfts' dot> text-value
 wfts = <dot? 'wfts' dot> text-value
+match = <dot? 'match' dot> text-value
+imatch = <dot? 'imatch' dot> text-value
 or = <dot? 'or'> or-body
 or-body = <'('> S <')'>
 and = <'and('> S <')'>
