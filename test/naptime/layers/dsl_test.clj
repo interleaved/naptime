@@ -7,75 +7,125 @@
             [ring.middleware.params :as params]
             [instaparse.core :as insta]))
 
-(def input
-  [{"age" "lt.13"}
-   {"age" "gte.18" "student" "is.true"}
-   {"or" "(age.lt.18,age.gt.21)"}
-   {"grade" "gte.90" "student" "is.true" "or" "(age.eq.14,not.and(age.gte.11,age.lte.17))"}
-   {"my_tsv" "fts(french).amusant"}
-   {"my_tsv" "plfts.The Fat Cats"}
-   {"my_tsv" "not.phfts(english).The Fat Cats"}
-   {"my_tsv" "not.wfts(french).amusant"}
-   {"select" "first_name,age"}
-   {"select" "fullName:full_name,birthDate:birth_date"}
-   {"select" "full_name,salary::text"}
-   {"select" "id,json_data->>blood_type,json_data->phones"}
-   {"select" "id,json_data->phones->0->>number"}
-   {"select" "id,json_data->blood_type" "json_data->>blood_type" "eq.A-"}
-   {"select" "id,json_data->age" "json_data->age" "gt.20"}
-   {"full_name" "fts.Beckett"}
-   {"select" "*,full_name"}
-   {"Unit Price" "lt.200"}
-   {"name" "in.(\"Hebdon,John\",\"Williams,Mary\")"}
-   {"\"information.cpe\"" "like.*MS*"}
-   {"order" "age.desc,height.asc"}
-   {"order" "age"}
-   {"order" "age.nullsfirst"}
-   {"order" "age.desc.nullslast"}
-   {"id" "eq.1"}
-   {"select" "title"}
-   {"select" "title,directors(id,last_name)"}
-   {"select" "title,director:directors(id,last_name)"}
-   {"select" "films(title,year)"}
-   {"select" "roles(character,films(title,year))"}
-   {"select" "*,actors(*)" "actors.order" "last_name,first_name"}
-   {"select" "*,roles(*)" "roles.character" "in.(Chico,Harpo,Groucho)"}
-   {"select" "*,roles(*)" "roles.or" "(character.eq.Gummo,character.eq.Zeppo)"}
-   {"select" "*,actors(*)"}
-   {"select" "*,90_comps:competitions(name),91_comps:competitions(name)" "90_comps.year" "eq.1990" "91_comps.year" "eq.1991"}
-   {"select" "*,roles(*,actors(*))" "roles.actors.order" "last_name" "roles.actors.first_name" "like.*Tom*"}
-   {"select" "title,actors(first_name,last_name)" "actors.first_name" "eq.Jehanne"}
-   {"select" "title,actors!inner(first_name,last_name)" "actors.first_name" "eq.Jehanne"}
-   {"select" "bo_date,gross_revenue,films(title)" "gross_revenue" "gte.1000000"}
-   {"select" "rank,competitions(name,year),films(title)" "rank" "eq.5"}
-   {"select" "title,year,director:directors(first_name,last_name)"}
-   {"select" "*,addresses(*)"}
-   {"select" "name,billing_address(name)"}
-   {"select" "name,billing_address:billing_address_id(name)"}
-   {"select" "*,billing_address(*)"}
-   {"select" "*,central_addresses!billing_address(*)"}
-   {"select" "*,central_addresses!billing_address!inner(*)" "central_addresses.code" "eq.AB1000"}
-   {"age" "lt.13"}
-   {"id" "eq.4"}
-   {"active" "is.false"}
-   {"id" "eq.1"}
-   {"columns" "source,publication_date,figure"}])
-
 (defn query-params [uri-with-query-string]
   (-> (mock/request :get uri-with-query-string)
       params/params-request
       :query-params))
 
-(defn select-inputs [k]
-  (->> input
-       (map #(select-keys % [k]))
-       (keep seq)
-       (mapcat identity)))
+(def filter-inputs
+  [["age" "lt.13"]
+   ["age" "gte.18"]
+   ["student" "is.true"]
+   ["grade" "gte.90"]
+   ["student" "is.true"]
+   ["my_tsv" "fts(french).amusant"]
+   ["my_tsv" "plfts.The Fat Cats"]
+   ["my_tsv" "not.phfts(english).The Fat Cats"]
+   ["my_tsv" "not.wfts(french).amusant"]
+   ["json_data->>blood_type" "eq.A-"]
+   ["json_data->age" "gt.20"]
+   ["full_name" "fts.Beckett"]
+   ["Unit Price" "lt.200"]
+   ["name" "in.(\"Hebdon,John\",\"Williams,Mary\")"]
+   ["\"information.cpe\"" "like.*MS*"]
+   ["id" "eq.1"]
+   ["roles.character" "in.(Chico,Harpo,Groucho)"]
+   ["90_comps.year" "eq.1990"]
+   ["91_comps.year" "eq.1991"]
+   ["roles.actors.first_name" "like.*Tom*"]
+   ["actors.first_name" "eq.Jehanne"]
+   ["actors.first_name" "eq.Jehanne"]
+   ["gross_revenue" "gte.1000000"]
+   ["rank" "eq.5"]
+   ["central_addresses.code" "eq.AB1000"]
+   ["age" "lt.13"]
+   ["id" "eq.4"]
+   ["active" "is.false"]
+   ["id" "eq.1"]
+   ["id" "eq.5"]
+   ["id" "not.eq.5"]
+   ["k" "like.*yx"]
+   ["extra" "not.eq.u"]
+   ["id" "not.lt.14"]
+   ["id" "in.(1,3,5)"]
+   ["id" "not.in.(2,4,6,7,8,9,10,11,12,13,14,15)"]
+   ["a" "not.is.null"]
+   ["a" "is.null"]
+   ["done" "is.true"]
+   ["done" "is.false"]
+   ["done" "is.unknown"]
+   ["done" "is.NULL"]
+   ["done" "is.TRUE"]
+   ["done" "is.FAlSe"]
+   ["done" "is.UnKnOwN"]
+   ["done" "is.nil"]
+   ["done" "is.ok"]
+   ["k" "like.*yx"]
+   ["k" "like.xy*"]
+   ["k" "like.*YY*"]
+   ["k" "not.like.*yx"]
+   ["k" "ilike.xy*"]
+   ["k" "ilike.*YY*"]
+   ["k" "not.ilike.xy*"]
+   ["k" "match.yx$"]
+   ["k" "match.^xy"]
+   ["k" "match.YY"]
+   ["k" "not.match.yx$"]
+   ["k" "imatch.^xy"]
+   ["k" "imatch..*YY.*"]])
+
+(def or-inputs
+  [["or" "(age.lt.18,age.gt.21)"]
+   ["or" "(age.eq.14,not.and(age.gte.11,age.lte.17))"]])
+
+(def dot-or-inputs
+  [["roles.or" "(character.eq.Gummo,character.eq.Zeppo)"]])
+
+(def select-inputs
+  [["select" "first_name,age"]
+   ["select" "fullName:full_name,birthDate:birth_date"]
+   ["select" "full_name,salary::text"]
+   ["select" "id,json_data->>blood_type,json_data->phones"]
+   ["select" "id,json_data->phones->0->>number"]
+   ["select" "id,json_data->blood_type"]
+   ["select" "id,json_data->age"]
+   ["select" "*,full_name"]
+   ["select" "title"]
+   ["select" "title,directors(id,last_name)"]
+   ["select" "title,director:directors(id,last_name)"]
+   ["select" "films(title,year)"]
+   ["select" "roles(character,films(title,year))"]
+   ["select" "*,actors(*)"]
+   ["select" "*,roles(*)"]
+   ["select" "*,roles(*)"]
+   ["select" "*,actors(*)"]
+   ["select" "*,90_comps:competitions(name),91_comps:competitions(name)"]
+   ["select" "*,roles(*,actors(*))"]
+   ["select" "title,actors(first_name,last_name)"]
+   ["select" "title,actors!inner(first_name,last_name)"]
+   ["select" "bo_date,gross_revenue,films(title)"]
+   ["select" "rank,competitions(name,year),films(title)"]
+   ["select" "title,year,director:directors(first_name,last_name)"]
+   ["select" "*,addresses(*)"]
+   ["select" "name,billing_address(name)"]
+   ["select" "name,billing_address:billing_address_id(name)"]
+   ["select" "*,billing_address(*)"]
+   ["select" "*,central_addresses!billing_address(*)"]
+   ["select" "*,central_addresses!billing_address!inner(*)"]])
+
+(def order-inputs
+  [["order" "age.desc,height.asc"]
+   ["order" "age"]
+   ["order" "age.nullsfirst"]
+   ["order" "age.desc.nullslast"]
+   ["order" "id"]
+   ["order" "id.asc"]
+   ["order" "extra.asc"]])
 
 (deftest ambiguity-test
   (with-redefs [insta/parse insta/parses]
     (testing "zero select ambiguites"
-      (doseq [[input ast] (map (juxt identity (comp second dsl/parse-param)) (select-inputs "select"))]
+      (doseq [[input ast] (map (juxt identity (comp second dsl/parse-param)) select-inputs)]
         (is (== 1 (count ast)) input)))))
 
 ;; from this file: https://github.com/PostgREST/postgrest/blob/main/test/spec/Feature/Query/QuerySpec.hs
