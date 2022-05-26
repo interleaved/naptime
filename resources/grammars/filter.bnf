@@ -8,8 +8,9 @@ where = (c5 / c6)
 <c6> = op
 
 not = <'not'>
-table = #'[a-zA-Z0-9_]+'
-column = #'[a-zA-Z0-9_]+'
+table = #'(?!not.)[a-zA-Z0-9_]+'
+column = #'(?!not.)[a-zA-Z0-9_]+'
+<dot> = <'.'>
 
 op = (eq|gt|gte|lt|lte|neq|like|ilike|in|is|fts|plfts|phfts|wfts|or|and|match|imatch)
 
@@ -30,17 +31,17 @@ wfts = <'wfts'> locale <dot> text-value / <'wfts.'> text-value
 match = <'match' dot> text-value
 imatch = <'imatch' dot> text-value
 
-or = <'or'> or-body
+or = or or-body
 or-body = <'('> conditions <')'>
 and = <'and('> conditions <')'>
 <conditions> = condition (<','> condition)*
 condition = (c1 / c2 / c3 / c4 / c5 / c6)
-<dot> = <'.'>
 locale = <'('> #'[a-zA-Z0-9_]+' <')'>
 
-<value> = (numeric-value / text-value)
+<value> = numeric-value / quoted-string / bare-string1
 <numeric-value> = (number)
-<text-value> = (number / quoted-string / bare-string )
+<text-value> = quoted-string / bare-string2
 number = #'[0-9]+'
-bare-string = #'[^"][^,)]*'
+bare-string1 = #'[^"0-9](?![0-9]+)[^,)]*'
+bare-string2 = #'[^"][^,)]*'
 quoted-string = <'\"'> #'[^\"]+' <'\"'>
