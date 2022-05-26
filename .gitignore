@@ -3,3 +3,4 @@
 docker/
 .clj-kondo/
 .lsp/
+target/
