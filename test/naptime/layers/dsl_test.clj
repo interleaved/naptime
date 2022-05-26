@@ -58,8 +58,6 @@
    ["done" "is.TRUE"]
    ["done" "is.FAlSe"]
    ["done" "is.UnKnOwN"]
-   ["done" "is.nil"]
-   ["done" "is.ok"]
    ["k" "like.*yx"]
    ["k" "like.xy*"]
    ["k" "like.*YY*"]
@@ -126,96 +124,95 @@
   (with-redefs [insta/parse insta/parses]
     (testing "zero select ambiguites"
       (doseq [[input ast] (map (juxt identity (comp second dsl/parse-param)) select-inputs)]
+        (is (== 1 (count ast)) input)))
+    (testing "zero filter ambiguites"
+      (doseq [[input ast] (map (juxt identity (comp second dsl/parse-param)) filter-inputs)]
         (is (== 1 (count ast)) input)))))
 
 ;; from this file: https://github.com/PostgREST/postgrest/blob/main/test/spec/Feature/Query/QuerySpec.hs
 (deftest dsl-tests
   (testing "matches with equality"
-    (is (= [[[[:regular-column "id"]] [[:condition [:op [:eq [:number "5"]]]]]]]
+    (is (= [[[[:regular-column "id"]] [:where [:op [:eq [:number "5"]]]]]]
            (dsl/parse-params (query-params "items?id=eq.5")))))
 
   (testing "matches with equality not using operator"
-    ;; TODO: not should not be column-name
-    (is (= [[[[:regular-column "id"]] [[:condition [:column-name "not"] [:op [:eq [:number "5"]]]]]] [:order [[:column [:column-name "id"]]]]]
+    (is (= [[[[:regular-column "id"]] [:where [:not] [:op [:eq [:number "5"]]]]] [:order [[:column [:column-name "id"]]]]]
            (dsl/parse-params (query-params "items?id=not.eq.5&order=id")))))
 
   (testing "matches with more than one condition using not operator"
-    ;; TODO: not should not be column-name
-    (is (is (= [[[[:regular-column "k"]] [[:condition [:op [:like [:bare-string "*yx"]]]]]]
-                [[[:regular-column "extra"]] [[:condition [:column-name "not"] [:op [:eq [:bare-string "u"]]]]]]]
+    (is (is (= [[[[:regular-column "k"]] [:where [:op [:like [:bare-string "*yx"]]]]]
+                [[[:regular-column "extra"]] [:where [:not] [:op [:eq [:bare-string "u"]]]]]]
                (dsl/parse-params (query-params "/simple_pk?k=like.*yx&extra=not.eq.u"))))))
 
   (testing "matches with inequality using not operator"
-    ;; TODO: not should not be column-name
     (is (=  [[[[:regular-column "id"]]
-              [[:condition [:column-name "not"] [:op [:lt [:number "14"]]]]]]
+              [:where [:not] [:op [:lt [:number "14"]]]]]
              [:order [[:column [:column-name "id"] [:asc]]]]]
             (dsl/parse-params (query-params "/items?id=not.lt.14&order=id.asc")))))
 
   (testing "matches items IN"
-    (is (= [[[[:regular-column "id"]] [[:condition [:op [:in [:number "1"] [:number "3"] [:number "5"]]]]]]]
+    (is (= [[[[:regular-column "id"]] [:where [:op [:in [:number "1"] [:number "3"] [:number "5"]]]]]]
            (dsl/parse-params (query-params "/items?id=in.(1,3,5)")))))
 
   (testing "matches items NOT IN using not operator"
     ;; TODO: not should not be column-name
     (is (= [[[[:regular-column "id"]]
-             [[:condition
-               [:column-name "not"]
-               [:op
-                [:in
-                 [:number "2"]
-                 [:number "4"]
-                 [:number "6"]
-                 [:number "7"]
-                 [:number "8"]
-                 [:number "9"]
-                 [:number "10"]
-                 [:number "11"]
-                 [:number "12"]
-                 [:number "13"]
-                 [:number "14"]
-                 [:number "15"]]]]]]]
+             [:where
+              [:not]
+              [:op
+               [:in
+                [:number "2"]
+                [:number "4"]
+                [:number "6"]
+                [:number "7"]
+                [:number "8"]
+                [:number "9"]
+                [:number "10"]
+                [:number "11"]
+                [:number "12"]
+                [:number "13"]
+                [:number "14"]
+                [:number "15"]]]]]]
            (dsl/parse-params (query-params "/items?id=not.in.(2,4,6,7,8,9,10,11,12,13,14,15)")))))
 
   (testing "matches nulls using not operator"
-    ;; TODO: not
     ;; TODO: might not want null as string but operator type, when translate to sql IS NULL is actually a clause, not value
     (is (= [[[[:regular-column "a"]]
-             [[:condition [:column-name "not"] [:op [:is "null"]]]]]]
+             [:where [:not] [:op [:is "null"]]]]]
            (dsl/parse-params (query-params "/no_pk?a=not.is.null")))))
 
   (testing "matches nulls in varchar and numeric fields alike"
     ;; TODO: null as op
-    (is (= [[[[:regular-column "a"]] [[:condition [:op [:is "null"]]]]]]
+    (is (= [[[[:regular-column "a"]] [:where [:op [:is "null"]]]]]
            (dsl/parse-params (query-params "/no_pk?a=is.null")))))
 
   (testing "matches with trilean values"
     (testing "/chores?done=is.true"
-      (is (= [[[[:regular-column "done"]] [[:condition [:op [:is "true"]]]]]]
+      (is (= [[[[:regular-column "done"]] [:where [:op [:is "true"]]]]]
              (dsl/parse-params (query-params "/chores?done=is.true")))))
 
     (testing "/chores?done=is.false"
-      (is (= [[[[:regular-column "done"]] [[:condition [:op [:is "false"]]]]]]
+      (is (= [[[[:regular-column "done"]] [:where [:op [:is "false"]]]]]
              (dsl/parse-params (query-params "/chores?done=is.false")))))
 
     (testing "/chores?done=is.unknown"
-      (is (= [[[[:regular-column "done"]] [[:condition [:op [:is "unknown"]]]]]]
+      (is (= [[[[:regular-column "done"]] [:where [:op [:is "unknown"]]]]]
              (dsl/parse-params (query-params "/chores?done=is.unknown")))))
 
     (testing "matches with trilean values in upper or mixed case"
-      (is (= [[[[:regular-column "done"]] [[:condition [:op [:is "NULL"]]]]]]
+      (is (= [[[[:regular-column "done"]] [:where [:op [:is "NULL"]]]]]
              (dsl/parse-params (query-params "/chores?done=is.NULL")))))
 
     (testing "/chores?done=is.TRUE"
-      (is (= [[[[:regular-column "done"]] [[:condition [:op [:is "TRUE"]]]]]]
+      (is (= [[[[:regular-column "done"]] [:where [:op [:is "TRUE"]]]]]
              (dsl/parse-params (query-params "/chores?done=is.TRUE")))))
 
     (testing "/chores?done=is.FAlSe"
-      (is (= [[[[:regular-column "done"]] [[:condition [:op [:is "FAlSe"]]]]]]
+      (is (= [[[[:regular-column "done"]] [:where [:op [:is "FAlSe"]]]]]
              (dsl/parse-params (query-params "/chores?done=is.FAlSe")))))
 
     (testing "/chores?done=is.UnKnOwN"
-      (is (= [[[[:regular-column "done"]] [[:condition [:op [:is "UnKnOwN"]]]]]]
+      (is (= [[[[:regular-column "done"]] [:where [:op [:is "UnKnOwN"]]]]]
              (dsl/parse-params (query-params "/chores?done=is.UnKnOwN"))))))
 
   (testing "fails if 'is' used and there's no null or trilean value"
@@ -233,60 +230,60 @@
   (testing "matches with like"
     (testing "prefix"
       (is (= [[[[:regular-column "k"]]
-               [[:condition [:op [:like [:bare-string "*yx"]]]]]]]
+               [:where [:op [:like [:bare-string "*yx"]]]]]]
              (dsl/parse-params (query-params "/simple_pk?k=like.*yx")))))
     (testing "suffix"
       (is (= [[[[:regular-column "k"]]
-               [[:condition [:op [:like [:bare-string "xy*"]]]]]]]
+               [:where [:op [:like [:bare-string "xy*"]]]]]]
              (dsl/parse-params (query-params "/simple_pk?k=like.xy*")))))
     (testing "prefix and suffix"
       (is (= [[[[:regular-column "k"]]
-               [[:condition [:op [:like [:bare-string "*YY*"]]]]]]]
+               [:where [:op [:like [:bare-string "*YY*"]]]]]]
              (dsl/parse-params (query-params "/simple_pk?k=like.*YY*"))))))
 
   (testing "matches with like using not operator"
     (is (= [[[[:regular-column "k"]]
-             [[:condition [:column-name "not"] [:op [:like [:bare-string "*yx"]]]]]]]
+             [:where [:not] [:op [:like [:bare-string "*yx"]]]]]]
            (dsl/parse-params (query-params "/simple_pk?k=not.like.*yx")))))
 
   (testing "matches with ilike"
     (testing "suffix"
       (is (= [[[[:regular-column "k"]]
-               [[:condition [:op [:ilike [:bare-string "xy*"]]]]]]
+               [:where [:op [:ilike [:bare-string "xy*"]]]]]
               [:order [[:column [:column-name "extra"] [:asc]]]]]
              (dsl/parse-params (query-params "/simple_pk?k=ilike.xy*&order=extra.asc")))))
 
     (testing "prefix suffix"
       (is (= [[[[:regular-column "k"]]
-               [[:condition [:op [:ilike [:bare-string "*YY*"]]]]]]
+               [:where [:op [:ilike [:bare-string "*YY*"]]]]]
               [:order [[:column [:column-name "extra"] [:asc]]]]]
              (dsl/parse-params (query-params "/simple_pk?k=ilike.*YY*&order=extra.asc"))))))
 
   (testing "matches with ilike using not operator"
     ;; TODO: not
     (is (= [[[[:regular-column "k"]]
-             [[:condition [:column-name "not"] [:op [:ilike [:bare-string "xy*"]]]]]]
+             [:where [:not] [:op [:ilike [:bare-string "xy*"]]]]]
             [:order [[:column [:column-name "extra"] [:asc]]]]]
            (dsl/parse-params (query-params "/simple_pk?k=not.ilike.xy*&order=extra.asc")))))
 
   (testing "matches with ~"
     (testing "terminating dollar sign"
-      (is (= [[[[:regular-column "k"]] [[:condition [:op [:match [:bare-string "yx$"]]]]]]]
+      (is (= [[[[:regular-column "k"]] [:where [:op [:match [:bare-string "yx$"]]]]]]
              (dsl/parse-params (query-params "/simple_pk?k=match.yx$")))))
 
     (testing "head sign prefix"
-      (is (= [[[[:regular-column "k"]] [[:condition [:op [:match [:bare-string "^xy"]]]]]]]
+      (is (= [[[[:regular-column "k"]] [:where [:op [:match [:bare-string "^xy"]]]]]]
              (dsl/parse-params (query-params
                                 "/simple_pk?k=match.%5Exy")))))
     (testing "match regular"
-      (is (= [[[[:regular-column "k"]] [[:condition [:op [:match [:bare-string "YY"]]]]]]]
+      (is (= [[[[:regular-column "k"]] [:where [:op [:match [:bare-string "YY"]]]]]]
              (dsl/parse-params (query-params
                                 "/simple_pk?k=match.YY"))))))
 
   (testing "matches with ~ using not operator"
     ;; TODO: not
     (is (= [[[[:regular-column "k"]]
-             [[:condition [:column-name "not"] [:op [:match [:bare-string "yx$"]]]]]]]
+             [:where [:not] [:op [:match [:bare-string "yx$"]]]]]]
            (dsl/parse-params (query-params "/simple_pk?k=not.match.yx$")))))
 
   (testing "matches with ~*" ;; case-insensitive

@@ -1,33 +1,46 @@
-<S> = condition (<','> condition)*
-condition = not? table-name? column-name? op
-not = <'not.'>
+where = (c5 / c6)
+
+<c1> = not dot table dot column dot op
+<c2> = table dot column dot op
+<c3> = not dot column dot op
+<c4> = column dot op 
+<c5> = not dot op
+<c6> = op
+
+not = <'not'>
+table = #'[a-zA-Z0-9_]+'
+column = #'[a-zA-Z0-9_]+'
+
 op = (eq|gt|gte|lt|lte|neq|like|ilike|in|is|fts|plfts|phfts|wfts|or|and|match|imatch)
-eq = <dot? 'eq' dot> value
-gt = <dot? 'gt' dot> value
-gte = <dot? 'gte' dot> value
-lt = <dot? 'lt' dot> value
-lte = <dot? 'lte' dot> value
-neq = <dot? 'neq' dot> value
-like = <dot? 'like' dot> value
-ilike = <dot? 'ilike' dot> value
-in = <dot? 'in' dot? '('> value (<','> value)* <')'>
-is = <dot? 'is.'> #"(?i)(null|true|false|unknown)"
-fts = <dot? 'fts'> locale <dot> text-value / <'fts.'> text-value
-plfts = <dot? 'plfts' dot> text-value
-phfts = <dot? 'phfts' dot> text-value
-wfts = <dot? 'wfts' dot> text-value
-match = <dot? 'match' dot> text-value
-imatch = <dot? 'imatch' dot> text-value
-or = <dot? 'or'> or-body
-or-body = <'('> S <')'>
-and = <'and('> S <')'>
-<dot> = '.'
+
+eq = <'eq' dot> value
+gt = <'gt' dot> value
+gte = <'gte' dot> value
+lt = <'lt' dot> value
+lte = <'lte' dot> value
+neq = <'neq' dot> value
+like = <'like' dot> value
+ilike = <'ilike' dot> value
+in = <'in' dot? '('> value (<','> value)* <')'>
+is = <'is.'> #"(?i)(null|true|false|unknown)"
+fts = <'fts'> locale <dot> text-value / <'fts.'> text-value
+plfts = <'pllfts'> locale <dot> text-value / <'plfts.'> text-value
+phfts = <'phfts'> locale <dot> text-value / <'phfts.'> text-value
+wfts = <'wfts'> locale <dot> text-value / <'wfts.'> text-value
+match = <'match' dot> text-value
+imatch = <'imatch' dot> text-value
+
+or = <'or'> or-body
+or-body = <'('> conditions <')'>
+and = <'and('> conditions <')'>
+<conditions> = condition (<','> condition)*
+condition = (c1 / c2 / c3 / c4 / c5 / c6)
+<dot> = <'.'>
 locale = <'('> #'[a-zA-Z0-9_]+' <')'>
-<value> = (numeric-value|text-value)
+
+<value> = (numeric-value / text-value)
 <numeric-value> = (number)
-<text-value> = (bare-string|quoted-string|number)
+<text-value> = (number / quoted-string / bare-string )
 number = #'[0-9]+'
-bare-string = #'[^,)]+'
+bare-string = #'[^"][^,)]*'
 quoted-string = <'\"'> #'[^\"]+' <'\"'>
-table-name = #'[a-zA-Z0-9_]+'
-column-name = dot? #'[a-zA-Z0-9_]+'

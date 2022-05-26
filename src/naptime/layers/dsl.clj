@@ -30,7 +30,7 @@
        (insta/parse filter-grammar dsl :start :or-body)]
       :else
       [(insta/parse select-grammar type :start :token)
-       (insta/parse filter-grammar dsl)])))
+       (insta/parse filter-grammar dsl :start :where)])))
 
 (defn parse-params [params]
   (mapv parse-param params))
