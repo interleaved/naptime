@@ -130,6 +130,11 @@
         (is (== 1 (count ast)) input)))
     (testing "zero or ambiguites"
       (doseq [[input ast] (map (juxt identity (comp second dsl/parse-param)) or-inputs)]
+        (is (== 1 (count ast)) input))
+      (doseq [[input ast] (map (juxt identity (comp second dsl/parse-param)) dot-or-inputs)]
+        (is (== 1 (count ast)) input)))
+    (testing "zero order ambiguites"
+      (doseq [[input ast] (map (juxt identity (comp second dsl/parse-param)) order-inputs)]
         (is (== 1 (count ast)) input)))))
 
 ;; from this file: https://github.com/PostgREST/postgrest/blob/main/test/spec/Feature/Query/QuerySpec.hs

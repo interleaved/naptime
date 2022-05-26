@@ -4,5 +4,5 @@ desc = <'.desc'>
 asc = <'.asc'>
 nullsfirst = <'.nullsfirst'>
 nullslast = <'.nullslast'>
-table-name = #'[a-zA-Z0-9_]+'
-column-name = <'.'?> #'[a-zA-Z0-9_]+'
+table-name = #'[a-zA-Z0-9_]+' <'.'>
+column-name = #'(?!desc|asc|nullsfirst|nullslast)[a-zA-Z0-9_]+'
