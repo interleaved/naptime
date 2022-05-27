@@ -29,7 +29,7 @@
       [[:subor (insta/parse select-grammar (sg/replace type ".or" "") :start :col)]
        (insta/parse filter-grammar dsl :start :or-body)]
       :else
-      [(insta/parse select-grammar type :start :col)
+      [[:filter (insta/parse select-grammar type :start :col)]
        (insta/parse filter-grammar dsl :start :where)])))
 
 (defn parse-params [params]

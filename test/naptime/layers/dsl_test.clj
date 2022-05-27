@@ -126,7 +126,7 @@
       (doseq [[input ast] (map (juxt identity (comp second dsl/parse-param)) select-inputs)]
         (is (== 1 (count ast)) input)))
     (testing "zero filter ambiguites"
-      (doseq [[input ast] (map (juxt identity (comp first dsl/parse-param)) filter-inputs)]
+      (doseq [[input ast] (map (juxt identity (comp second first dsl/parse-param)) filter-inputs)]
         (is (== 1 (count ast)) input))
       (doseq [[input ast] (map (juxt identity (comp second dsl/parse-param)) filter-inputs)]
         (is (== 1 (count ast)) input)))
@@ -142,31 +142,31 @@
 ;; from this file: https://github.com/PostgREST/postgrest/blob/main/test/spec/Feature/Query/QuerySpec.hs
 (deftest dsl-tests
   (testing "matches with equality"
-    (is (= [[[[:column-with-spaces "id"]] [:where [:op [:eq [:number "5"]]]]]]
+    (is (= [[[:filter [[:column-with-spaces "id"]]] [:where [:op [:eq [:number "5"]]]]]]
            (dsl/parse-params (query-params "items?id=eq.5")))))
 
   (testing "matches with equality not using operator"
-    (is (= [[[[:column-with-spaces "id"]] [:where [:not] [:op [:eq [:number "5"]]]]] [:order [[:column [:column-name "id"]]]]]
+    (is (= [[[:filter [[:column-with-spaces "id"]]] [:where [:not] [:op [:eq [:number "5"]]]]] [:order [[:column [:column-name "id"]]]]]
            (dsl/parse-params (query-params "items?id=not.eq.5&order=id")))))
 
   (testing "matches with more than one condition using not operator"
-    (is (is (= [[[[:column-with-spaces "k"]] [:where [:op [:like [:bare-string1 "*yx"]]]]]
-                [[[:column-with-spaces "extra"]] [:where [:not] [:op [:eq [:bare-string1 "u"]]]]]]
+    (is (is (= [[[:filter [[:column-with-spaces "k"]]] [:where [:op [:like [:bare-string1 "*yx"]]]]]
+                [[:filter [[:column-with-spaces "extra"]]] [:where [:not] [:op [:eq [:bare-string1 "u"]]]]]]
                (dsl/parse-params (query-params "/simple_pk?k=like.*yx&extra=not.eq.u"))))))
 
   (testing "matches with inequality using not operator"
-    (is (=  [[[[:column-with-spaces "id"]]
+    (is (=  [[[:filter [[:column-with-spaces "id"]]]
               [:where [:not] [:op [:lt [:number "14"]]]]]
              [:order [[:column [:column-name "id"] [:asc]]]]]
             (dsl/parse-params (query-params "/items?id=not.lt.14&order=id.asc")))))
 
   (testing "matches items IN"
-    (is (= [[[[:column-with-spaces "id"]] [:where [:op [:in [:number "1"] [:number "3"] [:number "5"]]]]]]
+    (is (= [[[:filter [[:column-with-spaces "id"]]] [:where [:op [:in [:number "1"] [:number "3"] [:number "5"]]]]]]
            (dsl/parse-params (query-params "/items?id=in.(1,3,5)")))))
 
   (testing "matches items NOT IN using not operator"
     ;; TODO: not should not be column-name
-    (is (= [[[[:column-with-spaces "id"]]
+    (is (= [[[:filter [[:column-with-spaces "id"]]]
              [:where
               [:not]
               [:op
@@ -187,42 +187,42 @@
 
   (testing "matches nulls using not operator"
     ;; TODO: might not want null as string but operator type, when translate to sql IS NULL is actually a clause, not value
-    (is (= [[[[:column-with-spaces "a"]]
+    (is (= [[[:filter [[:column-with-spaces "a"]]]
              [:where [:not] [:op [:is "null"]]]]]
            (dsl/parse-params (query-params "/no_pk?a=not.is.null")))))
 
   (testing "matches nulls in varchar and numeric fields alike"
     ;; TODO: null as op
-    (is (= [[[[:column-with-spaces "a"]] [:where [:op [:is "null"]]]]]
+    (is (= [[[:filter [[:column-with-spaces "a"]]] [:where [:op [:is "null"]]]]]
            (dsl/parse-params (query-params "/no_pk?a=is.null")))))
 
   (testing "matches with trilean values"
     (testing "/chores?done=is.true"
-      (is (= [[[[:column-with-spaces "done"]] [:where [:op [:is "true"]]]]]
+      (is (= [[[:filter [[:column-with-spaces "done"]]] [:where [:op [:is "true"]]]]]
              (dsl/parse-params (query-params "/chores?done=is.true")))))
 
     (testing "/chores?done=is.false"
-      (is (= [[[[:column-with-spaces "done"]] [:where [:op [:is "false"]]]]]
+      (is (= [[[:filter [[:column-with-spaces "done"]]] [:where [:op [:is "false"]]]]]
              (dsl/parse-params (query-params "/chores?done=is.false")))))
 
     (testing "/chores?done=is.unknown"
-      (is (= [[[[:column-with-spaces "done"]] [:where [:op [:is "unknown"]]]]]
+      (is (= [[[:filter [[:column-with-spaces "done"]]] [:where [:op [:is "unknown"]]]]]
              (dsl/parse-params (query-params "/chores?done=is.unknown")))))
 
     (testing "matches with trilean values in upper or mixed case"
-      (is (= [[[[:column-with-spaces "done"]] [:where [:op [:is "NULL"]]]]]
+      (is (= [[[:filter [[:column-with-spaces "done"]]] [:where [:op [:is "NULL"]]]]]
              (dsl/parse-params (query-params "/chores?done=is.NULL")))))
 
     (testing "/chores?done=is.TRUE"
-      (is (= [[[[:column-with-spaces "done"]] [:where [:op [:is "TRUE"]]]]]
+      (is (= [[[:filter [[:column-with-spaces "done"]]] [:where [:op [:is "TRUE"]]]]]
              (dsl/parse-params (query-params "/chores?done=is.TRUE")))))
 
     (testing "/chores?done=is.FAlSe"
-      (is (= [[[[:column-with-spaces "done"]] [:where [:op [:is "FAlSe"]]]]]
+      (is (= [[[:filter [[:column-with-spaces "done"]]] [:where [:op [:is "FAlSe"]]]]]
              (dsl/parse-params (query-params "/chores?done=is.FAlSe")))))
 
     (testing "/chores?done=is.UnKnOwN"
-      (is (= [[[[:column-with-spaces "done"]] [:where [:op [:is "UnKnOwN"]]]]]
+      (is (= [[[:filter [[:column-with-spaces "done"]]] [:where [:op [:is "UnKnOwN"]]]]]
              (dsl/parse-params (query-params "/chores?done=is.UnKnOwN"))))))
 
   (testing "fails if 'is' used and there's no null or trilean value"
@@ -239,60 +239,60 @@
 
   (testing "matches with like"
     (testing "prefix"
-      (is (= [[[[:column-with-spaces "k"]]
+      (is (= [[[:filter [[:column-with-spaces "k"]]]
                [:where [:op [:like [:bare-string1 "*yx"]]]]]]
              (dsl/parse-params (query-params "/simple_pk?k=like.*yx")))))
     (testing "suffix"
-      (is (= [[[[:column-with-spaces "k"]]
+      (is (= [[[:filter [[:column-with-spaces "k"]]]
                [:where [:op [:like [:bare-string1 "xy*"]]]]]]
              (dsl/parse-params (query-params "/simple_pk?k=like.xy*")))))
     (testing "prefix and suffix"
-      (is (= [[[[:column-with-spaces "k"]]
+      (is (= [[[:filter [[:column-with-spaces "k"]]]
                [:where [:op [:like [:bare-string1 "*YY*"]]]]]]
              (dsl/parse-params (query-params "/simple_pk?k=like.*YY*"))))))
 
   (testing "matches with like using not operator"
-    (is (= [[[[:column-with-spaces "k"]]
+    (is (= [[[:filter [[:column-with-spaces "k"]]]
              [:where [:not] [:op [:like [:bare-string1 "*yx"]]]]]]
            (dsl/parse-params (query-params "/simple_pk?k=not.like.*yx")))))
 
   (testing "matches with ilike"
     (testing "suffix"
-      (is (= [[[[:column-with-spaces "k"]]
+      (is (= [[[:filter [[:column-with-spaces "k"]]]
                [:where [:op [:ilike [:bare-string1 "xy*"]]]]]
               [:order [[:column [:column-name "extra"] [:asc]]]]]
              (dsl/parse-params (query-params "/simple_pk?k=ilike.xy*&order=extra.asc")))))
 
     (testing "prefix suffix"
-      (is (= [[[[:column-with-spaces "k"]]
+      (is (= [[[:filter [[:column-with-spaces "k"]]]
                [:where [:op [:ilike [:bare-string1 "*YY*"]]]]]
               [:order [[:column [:column-name "extra"] [:asc]]]]]
              (dsl/parse-params (query-params "/simple_pk?k=ilike.*YY*&order=extra.asc"))))))
 
   (testing "matches with ilike using not operator"
     ;; TODO: not
-    (is (= [[[[:column-with-spaces "k"]]
+    (is (= [[[:filter [[:column-with-spaces "k"]]]
              [:where [:not] [:op [:ilike [:bare-string1 "xy*"]]]]]
             [:order [[:column [:column-name "extra"] [:asc]]]]]
            (dsl/parse-params (query-params "/simple_pk?k=not.ilike.xy*&order=extra.asc")))))
 
   (testing "matches with ~"
     (testing "terminating dollar sign"
-      (is (= [[[[:column-with-spaces "k"]] [:where [:op [:match [:bare-string2 "yx$"]]]]]]
+      (is (= [[[:filter [[:column-with-spaces "k"]]] [:where [:op [:match [:bare-string2 "yx$"]]]]]]
              (dsl/parse-params (query-params "/simple_pk?k=match.yx$")))))
 
     (testing "head sign prefix"
-      (is (= [[[[:column-with-spaces "k"]] [:where [:op [:match [:bare-string2 "^xy"]]]]]]
+      (is (= [[[:filter [[:column-with-spaces "k"]]] [:where [:op [:match [:bare-string2 "^xy"]]]]]]
              (dsl/parse-params (query-params
                                 "/simple_pk?k=match.%5Exy")))))
     (testing "match regular"
-      (is (= [[[[:column-with-spaces "k"]] [:where [:op [:match [:bare-string2 "YY"]]]]]]
+      (is (= [[[:filter [[:column-with-spaces "k"]]] [:where [:op [:match [:bare-string2 "YY"]]]]]]
              (dsl/parse-params (query-params
                                 "/simple_pk?k=match.YY"))))))
 
   (testing "matches with ~ using not operator"
     ;; TODO: not
-    (is (= [[[[:column-with-spaces "k"]]
+    (is (= [[[:filter [[:column-with-spaces "k"]]]
              [:where [:not] [:op [:match [:bare-string2 "yx$"]]]]]]
            (dsl/parse-params (query-params "/simple_pk?k=not.match.yx$")))))
 
