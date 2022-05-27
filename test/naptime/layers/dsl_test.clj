@@ -126,6 +126,8 @@
       (doseq [[input ast] (map (juxt identity (comp second dsl/parse-param)) select-inputs)]
         (is (== 1 (count ast)) input)))
     (testing "zero filter ambiguites"
+      (doseq [[input ast] (map (juxt identity (comp first dsl/parse-param)) filter-inputs)]
+        (is (== 1 (count ast)) input))
       (doseq [[input ast] (map (juxt identity (comp second dsl/parse-param)) filter-inputs)]
         (is (== 1 (count ast)) input)))
     (testing "zero or ambiguites"

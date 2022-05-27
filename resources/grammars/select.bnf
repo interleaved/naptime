@@ -1,6 +1,8 @@
 <S> = token (<','> token)*
 <token> = (table / column )
 
+<col> = '"' (table-name <'.'>)* (wildcard / json-column / typed-column / renamed-column / column-with-spaces) '"' / (table-name <'.'>)* (wildcard / json-column / typed-column / renamed-column / column-with-spaces)
+
 <table> = (table-columns / table-hint / table-alias)
 
 table-hint = table-name <#'!(?!inner)'> (table-columns / table-alias)
@@ -14,6 +16,7 @@ json-column = (regular-column (json-key / json-nth))+ (typed-column / renamed-co
 typed-column = regular-column <'::'> type
 renamed-column = regular-column <':'> regular-column
 regular-column = #'[a-zA-Z0-9_]+'
+column-with-spaces = #'[a-zA-Z0-9_\ ]+'
 
 <type> = (complex-type / regular-type)
 regular-type = #'[a-zA-Z0-9_ ]+'

@@ -17,19 +17,19 @@
     "columns" [:columns (insta/parse select-grammar dsl)]
     (cond
       (sg/ends-with? type ".limit")
-      [[:sublimit (insta/parse select-grammar (sg/replace type ".limit" "") :start :token)]
+      [[:sublimit (insta/parse select-grammar (sg/replace type ".limit" "") :start :col)]
        (Long/parseLong dsl)]
       (sg/ends-with? type ".offset")
-      [[:suboffset (insta/parse select-grammar (sg/replace type ".offset" "") :start :token)]
+      [[:suboffset (insta/parse select-grammar (sg/replace type ".offset" "") :start :col)]
        (Long/parseLong dsl)]
       (sg/ends-with? type ".order")
-      [[:suborder (insta/parse select-grammar (sg/replace type ".order" "") :start :token)]
+      [[:suborder (insta/parse select-grammar (sg/replace type ".order" "") :start :col)]
        (insta/parse order-grammar dsl)]
       (sg/ends-with? type ".or")
-      [[:subor (insta/parse select-grammar (sg/replace type ".or" "") :start :token)]
+      [[:subor (insta/parse select-grammar (sg/replace type ".or" "") :start :col)]
        (insta/parse filter-grammar dsl :start :or-body)]
       :else
-      [(insta/parse select-grammar type :start :token)
+      [(insta/parse select-grammar type :start :col)
        (insta/parse filter-grammar dsl :start :where)])))
 
 (defn parse-params [params]
