@@ -1,9 +1,10 @@
 version: "3.7"
 services:
   postgres:
-    image: postgres:14.2-alpine
-    container_name: naptime-example-postgres
+    image: postgres:10.15-alpine
+    container_name: naptime-postgres
     volumes:
+      - ./test/sql:/docker-entrypoint-initdb.d/
       - ./docker/data/pgdata:/var/lib/postgresql/data
     command: ["postgres", "-c", "log_statement=all", "-c", "log_destination=stderr"]
     environment:
